@@ -89,8 +89,16 @@ export function createCard(payload: JsonRecord) {
   if (missing.length) throw new Error(`Missing billing address fields: ${missing.join(', ')}`);
 
   let deliveryAddress: JsonRecord | null = null;
+  let deliveryRecipient: JsonRecord | null = null;
   if (cardType === 'PHYSICAL') {
-    deliveryAddress = (payload.deliveryAddress ?? {}) as JsonRecord;
+    deliveryRecipient = (payload.deliveryRecipient ?? {}) as JsonRecord;
+    const missingRecipient = ['firstName', 'lastName', 'phone'].filter(
+      (field) => !text(deliveryRecipient as JsonRecord, field),
+    );
+    if (missingRecipient.length) {
+      throw new Error(`Missing delivery recipient fields: ${missingRecipient.join(', ')}`);
+    }
+    deliveryAddress = (deliveryRecipient.address ?? payload.deliveryAddress ?? {}) as JsonRecord;
     const missingDelivery = requiredAddress.filter((field) => !text(deliveryAddress as JsonRecord, field));
     if (missingDelivery.length) {
       throw new Error(`Missing delivery address fields: ${missingDelivery.join(', ')}`);
@@ -111,6 +119,7 @@ export function createCard(payload: JsonRecord) {
     balance: 0,
     billingAddress,
     deliveryAddress,
+    deliveryRecipient,
     fulfillmentStatus: cardType === 'PHYSICAL' ? 'PROCESSING' : 'ISSUED',
   };
 

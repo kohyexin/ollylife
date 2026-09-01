@@ -26,6 +26,8 @@ function initialState() {
     commissionBalance: 3250,
     cards: [],
     transactions: [],
+    deliveryRecipient: null,
+    deliveryRecipientSelection: "billing",
     apiTrace: [],
     topupOpen: false,
     walletView: "overview",
@@ -294,16 +296,83 @@ function updateCardTypeForm() {
   const deliverySection = document.getElementById("delivery-section");
   if (!selected || !deliverySection) return;
   const isPhysical = selected.value === "PHYSICAL";
-  const sameAsBilling = document.getElementById("delivery-same-as-billing");
-  const deliveryFields = document.getElementById("delivery-address-fields");
   const confirmDelivery = document.getElementById("confirm-delivery");
   deliverySection.hidden = !isPhysical;
-  const useBilling = Boolean(sameAsBilling && sameAsBilling.checked);
-  if (deliveryFields) deliveryFields.hidden = !isPhysical || useBilling;
-  document.querySelectorAll("[data-delivery-field]").forEach(function (field) {
-    field.required = isPhysical && !useBilling;
-  });
   if (confirmDelivery) confirmDelivery.required = isPhysical;
+  renderRecipientOptions();
+}
+
+function renderRecipientOptions() {
+  const billingName = document.querySelector("[data-billing-recipient-name]");
+  if (billingName) billingName.textContent = (state.firstName + " " + state.lastName).trim() || "Registered cardholder";
+  const customCard = document.getElementById("custom-recipient-card");
+  if (!customCard) return;
+  customCard.hidden = !state.deliveryRecipient;
+  if (state.deliveryRecipient) {
+    document.getElementById("custom-recipient-name").textContent = state.deliveryRecipient.firstName + " " + state.deliveryRecipient.lastName;
+    document.getElementById("custom-recipient-summary").textContent = state.deliveryRecipient.phone + " · " + state.deliveryRecipient.address.address + ", " + state.deliveryRecipient.address.city + " " + state.deliveryRecipient.address.postalCode;
+  }
+  const billingRadio = document.querySelector('input[name="delivery-recipient"][value="billing"]');
+  const customRadio = document.querySelector('input[name="delivery-recipient"][value="custom"]');
+  if (billingRadio) billingRadio.checked = state.deliveryRecipientSelection !== "custom" || !state.deliveryRecipient;
+  if (customRadio) customRadio.checked = state.deliveryRecipientSelection === "custom" && Boolean(state.deliveryRecipient);
+}
+
+function setRecipientField(id, value) {
+  const input = document.getElementById(id);
+  if (input) input.value = value || "";
+}
+
+function openRecipientEditor(source) {
+  const editor = document.getElementById("recipient-editor");
+  if (!editor) return;
+  const isExisting = source === "custom" && state.deliveryRecipient;
+  const billingAddress = source === "billing" ? addressFrom("billing") : null;
+  const recipient = isExisting ? state.deliveryRecipient : null;
+  document.getElementById("recipient-editor-title").textContent = source === "new" ? "Add new recipient" : "Modify recipient";
+  setRecipientField("recipient-first-name", recipient ? recipient.firstName : (source === "billing" ? state.firstName : ""));
+  setRecipientField("recipient-last-name", recipient ? recipient.lastName : (source === "billing" ? state.lastName : ""));
+  setRecipientField("recipient-phone-code", recipient ? recipient.phoneCode : state.phoneCode);
+  setRecipientField("recipient-phone", recipient ? recipient.phoneNumber : (source === "billing" ? state.phone : ""));
+  setRecipientField("recipient-country", recipient ? recipient.address.country : (billingAddress ? billingAddress.country : "Singapore"));
+  setRecipientField("recipient-state", recipient ? recipient.address.state : (billingAddress ? billingAddress.state : ""));
+  setRecipientField("recipient-city", recipient ? recipient.address.city : (billingAddress ? billingAddress.city : ""));
+  setRecipientField("recipient-postal", recipient ? recipient.address.postalCode : (billingAddress ? billingAddress.postalCode : ""));
+  setRecipientField("recipient-address-1", recipient ? recipient.address.address : (billingAddress ? billingAddress.address : ""));
+  setRecipientField("recipient-address-2", recipient ? recipient.address.addressLine2 : "");
+  editor.hidden = false;
+  document.getElementById("recipient-first-name").focus();
+}
+
+function saveRecipient() {
+  const requiredIds = ["recipient-first-name", "recipient-last-name", "recipient-phone", "recipient-state", "recipient-city", "recipient-postal", "recipient-address-1"];
+  const missing = requiredIds.find(function (id) { return !document.getElementById(id).value.trim(); });
+  if (missing) {
+    document.getElementById(missing).focus();
+    showToast("Recipient details required", "Complete all required recipient and address fields.");
+    return;
+  }
+  const phoneCode = document.getElementById("recipient-phone-code").value;
+  const phoneNumber = document.getElementById("recipient-phone").value.trim();
+  state.deliveryRecipient = {
+    firstName: document.getElementById("recipient-first-name").value.trim(),
+    lastName: document.getElementById("recipient-last-name").value.trim(),
+    phoneCode: phoneCode,
+    phoneNumber: phoneNumber,
+    phone: phoneCode + phoneNumber.replace(/\s/g, ""),
+    address: {
+      country: document.getElementById("recipient-country").value,
+      state: document.getElementById("recipient-state").value.trim(),
+      city: document.getElementById("recipient-city").value.trim(),
+      address: document.getElementById("recipient-address-1").value.trim(),
+      addressLine2: document.getElementById("recipient-address-2").value.trim(),
+      postalCode: document.getElementById("recipient-postal").value.trim(),
+    },
+  };
+  state.deliveryRecipientSelection = "custom";
+  document.getElementById("recipient-editor").hidden = true;
+  renderRecipientOptions();
+  showToast("Recipient saved", "The new delivery recipient is selected.");
 }
 
 function updatePasswordMeter() {
@@ -574,10 +643,18 @@ document.addEventListener("submit", async function (event) {
     try {
       const cardType = document.querySelector('input[name="card-type"]:checked').value;
       const billingAddress = addressFrom("billing");
-      const sameAsBilling = document.getElementById("delivery-same-as-billing").checked;
-      const deliveryAddress = cardType === "PHYSICAL"
-        ? (sameAsBilling ? billingAddress : addressFrom("delivery"))
+      const recipientSelection = document.querySelector('input[name="delivery-recipient"]:checked');
+      const deliveryRecipient = cardType === "PHYSICAL"
+        ? (recipientSelection && recipientSelection.value === "custom" && state.deliveryRecipient
+          ? state.deliveryRecipient
+          : {
+              firstName: state.firstName,
+              lastName: state.lastName,
+              phone: state.phoneCode + state.phone.replace(/\s/g, ""),
+              address: billingAddress,
+            })
         : null;
+      const deliveryAddress = deliveryRecipient ? deliveryRecipient.address : null;
       const result = await postJson("/api/vcchub/cards", {
         externalUserId: state.externalUserId,
         cardholderId: state.cardholderId,
@@ -593,6 +670,7 @@ document.addEventListener("submit", async function (event) {
         cardType: cardType,
         billingAddress: billingAddress,
         deliveryAddress: deliveryAddress,
+        deliveryRecipient: deliveryRecipient,
         deliveryAddressConfirmed: cardType !== "PHYSICAL" || document.getElementById("confirm-delivery").checked,
       });
       syncAccountPayload(result);
@@ -634,7 +712,18 @@ document.addEventListener("click", async function (event) {
   }
 
   const action = target.dataset.action;
-  if (action === "activate") {
+  if (action === "add-recipient") {
+    openRecipientEditor("new");
+  } else if (action === "modify-billing-recipient") {
+    openRecipientEditor("billing");
+  } else if (action === "edit-recipient") {
+    openRecipientEditor("custom");
+  } else if (action === "save-recipient") {
+    saveRecipient();
+  } else if (action === "cancel-recipient-edit") {
+    const editor = document.getElementById("recipient-editor");
+    if (editor) editor.hidden = true;
+  } else if (action === "activate") {
     state.modalOpen = true;
     render();
   } else if (action === "close-modal") {
@@ -749,8 +838,10 @@ document.addEventListener("click", async function (event) {
 });
 
 document.addEventListener("change", function (event) {
-  if (event.target.name === "card-type" || event.target.id === "delivery-same-as-billing") {
+  if (event.target.name === "card-type") {
     updateCardTypeForm();
+  } else if (event.target.name === "delivery-recipient") {
+    state.deliveryRecipientSelection = event.target.value;
   }
 });
 

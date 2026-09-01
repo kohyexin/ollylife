@@ -459,16 +459,38 @@
                   </div>
                 </section>
                 <section id="delivery-section" hidden>
-                  <div class="section-title-row"><div><h2>Physical Card Delivery</h2><p>Confirm where VCCHUB should deliver the physical card.</p></div><span class="physical-badge">Physical only</span></div>
-                  <label class="check-row delivery-choice"><input type="checkbox" id="delivery-same-as-billing" checked /><span>Use the billing address above as the delivery address</span></label>
-                  <div class="form-grid two" id="delivery-address-fields" hidden>
-                    <label>Country / Region *<select class="input" id="delivery-country" data-delivery-field><option value="Singapore">Singapore</option><option value="China">China</option></select></label>
-                    <label>State / Province *<input class="input" id="delivery-state" data-delivery-field placeholder="e.g. Singapore" /></label>
-                    <label>City *<input class="input" id="delivery-city" data-delivery-field placeholder="e.g. Singapore" /></label>
-                    <label>Postal code *<input class="input" id="delivery-postal" data-delivery-field placeholder="e.g. 018956" /></label>
-                    <label class="full">Delivery address *<input class="input" id="delivery-address" data-delivery-field placeholder="Street, building and unit number" /></label>
+                  <div class="section-title-row"><div><h2>Physical Card Recipient</h2><p>Choose who should receive the card and where it should be delivered.</p></div><span class="physical-badge">Physical only</span></div>
+                  <div class="recipient-toolbar"><strong>Saved recipients</strong><button class="recipient-add" type="button" data-action="add-recipient">＋ Add new recipient</button></div>
+                  <div class="recipient-list">
+                    <div class="recipient-card" data-billing-recipient-card>
+                      <label><input type="radio" name="delivery-recipient" value="billing" checked /><span><strong data-billing-recipient-name>Cardholder</strong><small>Use the billing address entered above</small></span></label>
+                      <button type="button" data-action="modify-billing-recipient">Modify</button>
+                    </div>
+                    <div class="recipient-card" id="custom-recipient-card" hidden>
+                      <label><input type="radio" name="delivery-recipient" value="custom" /><span><strong id="custom-recipient-name">Saved recipient</strong><small id="custom-recipient-summary">—</small></span></label>
+                      <button type="button" data-action="edit-recipient">Edit</button>
+                    </div>
                   </div>
-                  <label class="check-row delivery-confirm"><input type="checkbox" id="confirm-delivery" /><span>I confirm that the delivery address is complete and correct.</span></label>
+                  <div class="recipient-editor" id="recipient-editor" hidden>
+                    <div class="recipient-editor-head"><div><strong id="recipient-editor-title">Add new recipient</strong><small>Recipient information</small></div><button type="button" data-action="cancel-recipient-edit" aria-label="Close recipient editor">×</button></div>
+                    <div class="form-grid two">
+                      <label>First Name *<input class="input" id="recipient-first-name" /></label>
+                      <label>Last Name *<input class="input" id="recipient-last-name" /></label>
+                      <label>Area Code *<select class="input" id="recipient-phone-code"><option value="+65">+65 Singapore</option><option value="+86">+86 China</option></select></label>
+                      <label>Phone Number *<input class="input" id="recipient-phone" inputmode="tel" placeholder="e.g. 8123 4567" /></label>
+                    </div>
+                    <h3>Recipient Address</h3>
+                    <div class="form-grid two">
+                      <label>Country / Region *<select class="input" id="recipient-country"><option value="Singapore">Singapore</option><option value="China">China</option></select></label>
+                      <label>State / Province *<input class="input" id="recipient-state" placeholder="e.g. Singapore" /></label>
+                      <label>City *<input class="input" id="recipient-city" placeholder="e.g. Singapore" /></label>
+                      <label>Postal code *<input class="input" id="recipient-postal" placeholder="e.g. 018956" /></label>
+                      <label class="full">Address line 1 *<input class="input" id="recipient-address-1" placeholder="Street, building and unit number" /></label>
+                      <label class="full">Address line 2 <input class="input" id="recipient-address-2" placeholder="Optional" /></label>
+                    </div>
+                    <div class="recipient-editor-actions"><button class="btn btn-outline" type="button" data-action="cancel-recipient-edit">Cancel</button><button class="btn btn-violet" type="button" data-action="save-recipient">Save recipient</button></div>
+                  </div>
+                  <label class="delivery-confirm"><input type="checkbox" id="confirm-delivery" /><span><strong>Confirm recipient and delivery address</strong><small>I confirm the selected recipient details are complete and correct.</small></span></label>
                 </section>
                 <div class="card-form-actions"><button class="btn btn-outline" type="button" data-action="cancel-card">Cancel</button><button class="btn btn-violet" type="submit">Create card →</button></div>
               </form>
