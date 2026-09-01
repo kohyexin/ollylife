@@ -1,0 +1,13 @@
+.env.local
+.env.*.local
+.openai/
+demo/.env.local
+demo/server.py
+demo/vercel_backend.py
+demo/api/
+demo/__pycache__/
+demo/**/*.pyc
+demo/sumsub.env.example
+vite.config.ts
+.wrangler/
+dist/

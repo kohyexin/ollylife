@@ -1,0 +1,470 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="Ollylife and VCCHUB wallet activation journey demo" />
+    <title>Ollylife Wallet Activation Demo</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div id="app"></div>
+
+    <template id="portal-template">
+      <header class="app-header">
+        <div class="header-inner">
+          <a class="brand" href="#" data-jump="portal" aria-label="Ollylife home">
+            <span class="brand-mark">O</span>
+            <span><span class="brand-word">ollylife</span><span class="brand-sub">Member portal</span></span>
+          </a>
+          <div class="header-actions">
+            <button class="icon-btn" aria-label="Help">?</button>
+            <button class="icon-btn" aria-label="Notifications">◉</button>
+            <button class="account-chip" aria-label="Account menu">
+              <span class="avatar">OC</span>
+              <span class="account-copy"><strong>Olivia Chen</strong><span>Gold member</span></span>
+            </button>
+          </div>
+        </div>
+      </header>
+      <div class="portal-shell">
+        <aside class="sidebar">
+          <nav class="nav-list" aria-label="Main navigation">
+            <button class="nav-item active"><span class="nav-icon">⌂</span>Overview</button>
+            <button class="nav-item"><span class="nav-icon">◇</span>My rewards</button>
+            <button class="nav-item"><span class="nav-icon">▣</span>Wallet &amp; cards</button>
+            <button class="nav-item"><span class="nav-icon">○</span>Profile</button>
+          </nav>
+          <div class="help-card">
+            <div class="mini-icon">?</div>
+            <strong>Need a hand?</strong>
+            <p>Our member care team is here for you.</p>
+            <button class="text-link">Contact support →</button>
+          </div>
+          <button class="nav-item logout"><span class="nav-icon">↪</span>Sign out</button>
+        </aside>
+        <main class="dashboard">
+          <div class="dashboard-inner">
+            <div class="heading-row">
+              <div>
+                <p class="eyebrow">Monday, 31 August</p>
+                <h1 class="page-title">Good afternoon, Olivia</h1>
+                <p class="page-subtitle">Here’s your commission and connected wallet overview.</p>
+              </div>
+              <span class="status-pill">Account secure</span>
+            </div>
+            <div class="dashboard-grid">
+              <article class="wallet-hero" data-wallet-inactive>
+                <div class="hero-content">
+                  <div class="hero-top"><span>▣ Ollylife Wallet</span><span class="dark-pill">Not activated</span></div>
+                  <h2>Your wallet, ready when you are.</h2>
+                  <p>Activate your secure VCCHUB wallet to access multicurrency balances, virtual cards, and seamless payments.</p>
+                  <div class="hero-actions">
+                    <button class="btn btn-mint" data-action="activate">Activate wallet with cards →</button>
+                    <button class="tiny-link" data-action="show-why">Why activate?</button>
+                  </div>
+                </div>
+              </article>
+              <article class="wallet-ready" data-wallet-ready hidden>
+                <div class="hero-top"><span>▣ Ollylife Wallet</span><span class="verified-pill">✓ Verified &amp; linked</span></div>
+                <div class="balance-label">VCCHUB wallet balance</div>
+                <div class="balance" data-wallet-balance>SGD 0.00</div>
+                <p>Wallet ID VCC-OLLY-208418 · Connected to <span data-email-text></span></p>
+                <div class="portal-commission"><span>Available Ollylife commission</span><strong data-commission-balance>SGD 3,250.00</strong></div>
+                <div class="card-mini" data-portal-card hidden><strong>Ollylife Virtual</strong><span>•••• <span data-card-last4></span></span><em>◉</em></div>
+                <div class="hero-actions">
+                  <button class="btn btn-mint" data-action="open-sso">Open my VCCHUB wallet ↗</button>
+                  <button class="tiny-link" data-action="direct-login">Use VCCHUB login instead</button>
+                </div>
+                <div class="sso-note">◆ Secure single sign-on — no VCCHUB password required</div>
+              </article>
+              <article class="member-card">
+                <div class="member-icon">$</div>
+                <div class="label">Available commission balance</div>
+                <div class="commission-total" data-commission-balance>SGD 3,250.00</div>
+                <p class="commission-copy">Available to top up your VCCHUB wallet after wallet activation.</p>
+                <div class="stats">
+                  <div><span>Pending commission</span><strong>SGD 480.00</strong></div>
+                  <div><span>Next settlement</span><strong>15 Sep</strong></div>
+                </div>
+              </article>
+            </div>
+            <div class="quick-grid">
+              <article class="quick-card"><span class="quick-icon">◇</span><div><small>Rewards available</small><strong>3</strong><em>2 expiring soon</em></div></article>
+              <article class="quick-card"><span class="quick-icon">✉</span><div><small>Pending referrals</small><strong>2</strong><em>Invite friends</em></div></article>
+              <article class="quick-card"><span class="quick-icon">▱</span><div><small>Wallet cards</small><strong data-wallet-count>—</strong><em data-wallet-note>Activate to unlock</em></div></article>
+            </div>
+          </div>
+        </main>
+      </div>
+    </template>
+
+    <template id="invite-modal-template">
+      <div class="modal-backdrop" role="presentation" data-action="backdrop-close">
+        <section class="modal" role="dialog" aria-modal="true" aria-labelledby="invite-title" data-modal>
+          <div class="modal-head">
+            <div class="modal-icon">✉</div>
+            <h2 id="invite-title">Where should we send your wallet invite?</h2>
+            <p>VCCHUB will email a secure registration link to this address. You can use your Ollylife email or another address.</p>
+          </div>
+          <div class="modal-body">
+            <div class="field">
+              <label for="wallet-email">Email address</label>
+              <input class="input" id="wallet-email" type="email" autocomplete="email" />
+              <span class="field-note">Your logged-in email is selected by default.</span>
+              <span class="field-error" id="email-error"></span>
+            </div>
+          </div>
+          <div class="modal-actions">
+            <button class="btn btn-outline" data-action="close-modal">Cancel</button>
+            <button class="btn btn-primary" data-action="send-invite">Confirm &amp; send invite →</button>
+          </div>
+        </section>
+      </div>
+    </template>
+
+    <template id="sending-template">
+      <main class="loading-shell">
+        <section class="loading-card">
+          <div class="loading-visual">✉</div>
+          <h1>Creating your secure invite</h1>
+          <p>Ollylife is sending an <strong>Invite wallet user</strong> request to VCCHUB for <strong data-email-text></strong>.</p>
+          <div class="api-rail">
+            <span class="system-chip">Ollylife backend</span>
+            <span class="api-arrow">→ API →</span>
+            <span class="system-chip">VCCHUB</span>
+          </div>
+          <div class="loading-list">
+            <div class="loading-step done"><span class="dot">✓</span>Consent and email captured</div>
+            <div class="loading-step done"><span class="dot">✓</span>Invite wallet user API accepted · 202</div>
+            <div class="loading-step"><span class="dot">3</span>VCCHUB is preparing the registration email</div>
+          </div>
+        </section>
+      </main>
+    </template>
+
+    <template id="inbox-template">
+      <main class="inbox-shell">
+        <header class="mail-topbar">
+          <div class="mail-logo"><span>M</span>Mail</div>
+          <input class="mail-search" aria-label="Search mail" value="Search mail" readonly />
+        </header>
+        <div class="mail-layout">
+          <aside class="mail-sidebar">
+            <button class="compose">＋ Compose</button>
+            <div class="mail-folder active">✉ Inbox <strong style="margin-left:auto">1</strong></div>
+            <div class="mail-folder">☆ Starred</div>
+            <div class="mail-folder">⌁ Sent</div>
+          </aside>
+          <section class="mail-content">
+            <article class="email-panel">
+              <div class="email-subject">Spark PSP Limited: 邀请您注册为钱包用户</div>
+              <div class="email-meta">
+                <div class="sender-avatar">V</div>
+                <div><strong>VCCHUB Wallet Team &lt;no-reply@vcchub.demo&gt;</strong><span>To: <span data-email-text></span> · just now</span></div>
+              </div>
+              <div class="email-body" lang="zh-CN">
+                <div class="email-brand">vcc<span>hub</span></div>
+                <p>尊敬的 Olivia，</p>
+                <p>您好，</p>
+                <p>我们诚挚地邀请您注册成为我们的钱包成员。我们的钱包功能专为跨境资金流动而设计，支持在不同地区的卡之间进行便捷的金额划拨。</p>
+                <p>请点击下面的按钮，前往注册页面并完成注册流程：</p>
+                <p>出于安全考虑，此链接将在24小时后失效，请尽快完成注册。</p>
+                <button class="email-cta" data-action="open-registration">立刻注册</button>
+                <p>如有任何疑问或需要帮助，欢迎随时联系我们的客服团队。</p>
+                <div class="email-rule"></div>
+                <p class="email-fine">如果您并未发起此操作，可忽略该邮件。此为演示邮件，不会发送到真实邮箱。</p>
+              </div>
+            </article>
+          </section>
+        </div>
+      </main>
+    </template>
+
+    <template id="registration-template">
+      <main class="vcc-shell">
+        <header class="vcc-header">
+          <div class="brand vcc-brand"><span class="brand-mark">V</span><span class="brand-word">vcc<em>hub</em></span></div>
+        </header>
+        <div class="vcc-main">
+          <div class="registration-layout">
+            <form class="registration-card" id="registration-form" novalidate>
+              <h1 class="form-title">Create your VCCHUB account</h1>
+              <p class="form-subtitle">Your secure wallet is provided by Spark PSP Limited. Complete the details below to continue.</p>
+              <h2 class="section-title">Invite information</h2>
+              <div class="field">
+                <label for="wallet-name">Wallet name</label>
+                <input class="input" id="wallet-name" value="Ollylife Member Wallet" disabled />
+              </div>
+              <h2 class="section-title">User information</h2>
+              <div class="field">
+                <label for="username">Username <span class="required">*</span></label>
+                <input class="input" id="username" autocomplete="username" />
+                <span class="field-error" data-error="username"></span>
+              </div>
+              <div class="field">
+                <label for="phone">Phone number <span class="required">*</span></label>
+                <div class="input-row">
+                  <select class="select" id="phone-code" aria-label="Country code">
+                    <option value="+65">🇸🇬 +65</option>
+                    <option value="+86">🇨🇳 +86</option>
+                  </select>
+                  <input class="input" id="phone" inputmode="tel" autocomplete="tel" />
+                </div>
+                <span class="field-error" data-error="phone"></span>
+              </div>
+              <div class="field">
+                <label for="email">Email address <span class="required">*</span></label>
+                <input class="input" id="email" data-email-value disabled />
+                <span class="field-note">Locked to the email address in your invitation.</span>
+              </div>
+              <h2 class="section-title">Set up password</h2>
+              <div class="field">
+                <label for="password">Password <span class="required">*</span></label>
+                <input class="input" id="password" type="password" autocomplete="new-password" />
+                <div class="password-meter strength-0"><span></span><span></span><span></span><span></span></div>
+                <span class="field-note">Use 8+ characters with upper and lowercase letters and a number.</span>
+                <span class="field-error" data-error="password"></span>
+              </div>
+              <div class="field">
+                <label for="confirm-password">Confirm password <span class="required">*</span></label>
+                <input class="input" id="confirm-password" type="password" autocomplete="new-password" />
+                <span class="field-error" data-error="confirmPassword"></span>
+              </div>
+              <div class="terms-box">
+                <label class="checkbox-line">
+                  <input id="terms" type="checkbox" />
+                  <span>I have read and agree to the <a href="#" data-action="prevent">Master Service Agreement</a> and <a href="#" data-action="prevent">Privacy Policy</a>.</span>
+                </label>
+                <div class="field-error" style="margin-top:7px" data-error="terms"></div>
+              </div>
+              <button class="btn btn-violet btn-wide form-submit" type="submit">Create account &amp; continue →</button>
+            </form>
+            <aside class="journey-card">
+              <h3>Your activation journey</h3>
+              <p>Usually takes less than 5 minutes.</p>
+              <div class="journey-steps">
+                <div class="journey-step active"><span class="journey-number">1</span><strong>Create account</strong><span>Set up VCCHUB login</span></div>
+                <div class="journey-step"><span class="journey-number">2</span><strong>Accept terms</strong><span>Consent to policies</span></div>
+                <div class="journey-step"><span class="journey-number">3</span><strong>Verify identity</strong><span>Powered by Sumsub</span></div>
+                <div class="journey-step"><span class="journey-number">4</span><strong>Wallet ready</strong><span>Linked to Ollylife</span></div>
+              </div>
+            </aside>
+          </div>
+        </div>
+      </main>
+    </template>
+
+    <template id="kyc-template">
+      <main class="vcc-shell">
+        <header class="vcc-header">
+          <div class="brand vcc-brand"><span class="brand-mark">V</span><span class="brand-word">vcc<em>hub</em></span></div>
+        </header>
+        <div class="kyc-wrap">
+          <div class="kyc-banner">
+            <span><strong>Live Sumsub integration</strong> · Verification runs in Sumsub Sandbox using WebSDK 2.0.</span>
+            <span id="sumsub-mode">Checking configuration…</span>
+          </div>
+          <div class="kyc-layout">
+            <aside class="kyc-aside">
+              <h2>Identity verification</h2>
+              <p>Real sandbox session for this demo applicant.</p>
+              <div class="kyc-step active" data-live-step="0"><span>1</span>Prepare</div>
+              <div class="kyc-step" data-live-step="1"><span>2</span>Secure token</div>
+              <div class="kyc-step" data-live-step="2"><span>3</span>Sumsub checks</div>
+              <div class="kyc-step" data-live-step="3"><span>4</span>Final result</div>
+            </aside>
+            <section class="kyc-card kyc-live-card">
+              <div id="sumsub-setup">
+                <div class="sumsub-mark">sumsub</div>
+                <h1>Verify your identity</h1>
+                <p class="kyc-lead">Choose the issuing country for your document, then continue in Sumsub’s secure sandbox. Sumsub will handle document capture, liveness and the verification result.</p>
+                <div class="country-grid">
+                  <button class="choice-card selected" data-country="SGP">
+                    <span class="country-flag">🇸🇬</span>
+                    <span><strong>Singapore</strong><span>Singapore-issued identity document</span></span>
+                    <span class="choice-radio" aria-hidden="true"></span>
+                  </button>
+                  <button class="choice-card" data-country="CHN">
+                    <span class="country-flag">🇨🇳</span>
+                    <span><strong>Mainland China</strong><span>China-issued identity document</span></span>
+                    <span class="choice-radio" aria-hidden="true"></span>
+                  </button>
+                </div>
+                <div class="integration-status" id="sumsub-config-status">
+                  <span class="status-dot waiting"></span>
+                  <span><strong>Checking server configuration</strong><small>Sandbox credentials remain on the local server.</small></span>
+                </div>
+                <div class="integration-error" id="sumsub-error" hidden></div>
+                <div class="kyc-actions"><button class="btn btn-violet" id="start-sumsub" data-action="start-sumsub" disabled>Start Sumsub Sandbox verification →</button></div>
+              </div>
+              <div id="sumsub-session" hidden>
+                <div class="sdk-session-head">
+                  <div><div class="sumsub-mark">sumsub</div><small>Live sandbox session</small></div>
+                  <button class="btn btn-outline" data-action="check-sumsub-status" id="check-status" hidden>Check verification status</button>
+                </div>
+                <div class="sdk-event" id="sumsub-event">Loading secure verification…</div>
+                <div id="sumsub-websdk-container"></div>
+              </div>
+            </section>
+          </div>
+        </div>
+      </main>
+    </template>
+
+    <template id="success-template">
+      <main class="success-shell">
+        <section class="success-card">
+          <div class="success-head">
+            <div class="success-check">✓</div>
+            <h1>Your wallet account is ready</h1>
+            <p>Olivia’s identity has been verified, the VCCHUB account is active, and the account has been securely linked to Ollylife.</p>
+          </div>
+          <div class="success-body">
+            <div class="event-card">
+              <div class="event-title">Integration events <span>All systems healthy</span></div>
+              <div class="event-row"><code>Sumsub Sandbox → demo</code><strong>onApplicantVerificationCompleted · GREEN</strong><span class="event-ok">✓ Live result</span></div>
+              <div class="event-row"><code>Sumsub → VCCHUB demo</code><strong>Extract verified name + date of birth</strong><span class="event-ok">✓ Retrieved</span></div>
+              <div class="event-row"><code>VCCHUB demo API</code><strong>Create cardholder · wallet SGD 0.00</strong><span class="event-ok">✓ Created</span></div>
+              <div class="event-row"><code>VCCHUB demo → Ollylife</code><strong>wallet.binding.completed</strong><span class="event-ok">✓ Simulated 200</span></div>
+              <div class="event-row"><code>VCCHUB demo → email</code><strong>“Your account is ready” email</strong><span class="event-ok">✓ Simulated</span></div>
+            </div>
+            <div class="identity-card">
+              <div><small>Verified first name</small><strong data-first-name>—</strong></div>
+              <div><small>Verified last name</small><strong data-last-name>—</strong></div>
+              <div><small>Date of birth</small><strong data-dob>—</strong></div>
+              <div><small>VCCHUB cardholder</small><strong data-cardholder-id>—</strong></div>
+            </div>
+            <div style="margin-top:18px;padding:18px;border:1px solid #e1e6e3;border-radius:14px">
+              <div style="display:flex;gap:12px;align-items:center">
+                <div class="sender-avatar" style="background:#1d5f4b">✉</div>
+                <div><strong style="font-size:12px">VCCHUB: Your wallet is verified and ready</strong><div style="margin-top:3px;color:var(--muted);font-size:10px">Delivered to <span data-email-text></span></div></div>
+              </div>
+              <p style="margin:14px 0 0;color:var(--muted);font-size:11px;line-height:1.6">Your registration and identity verification are complete. You can now return to Ollylife for passwordless wallet access, or sign in directly at VCCHUB.</p>
+            </div>
+            <div class="success-actions">
+              <button class="btn btn-primary" data-action="return-olly">Return to Ollylife →</button>
+              <button class="btn btn-outline" data-action="direct-login">Preview direct login</button>
+            </div>
+          </div>
+        </section>
+      </main>
+    </template>
+
+    <template id="login-template">
+      <main class="login-shell">
+        <section class="login-card">
+          <div class="login-art">
+            <div class="brand vcc-brand"><span class="brand-mark">V</span><span class="brand-word">vcc<em>hub</em></span></div>
+            <h2>Your money, connected across borders.</h2>
+            <p>One secure wallet for multicurrency balances, card spending, and global transfers.</p>
+          </div>
+          <form class="login-form" id="login-form">
+            <div class="brand vcc-brand"><span class="brand-mark">V</span><span class="brand-word">vcc<em>hub</em></span></div>
+            <h1>Welcome back</h1>
+            <p>Sign in directly with the VCCHUB details you registered.</p>
+            <div class="field">
+              <label for="login-email">Email address</label>
+              <input class="input" id="login-email" type="email" data-email-value autocomplete="email" />
+            </div>
+            <div class="field">
+              <label for="login-password">Password</label>
+              <input class="input" id="login-password" type="password" value="DemoPass1" autocomplete="current-password" />
+            </div>
+            <a class="forgot" href="#" data-action="prevent">Forgot password?</a>
+            <button class="btn btn-violet btn-wide" type="submit">Sign in →</button>
+            <div class="login-note">Direct VCCHUB access requires the login details created during registration.</div>
+            <button class="btn btn-ghost" type="button" data-action="return-olly">← Return to Ollylife</button>
+          </form>
+        </section>
+      </main>
+    </template>
+
+    <template id="wallet-template">
+      <main class="vcc-console">
+        <header class="console-header">
+          <div class="brand vcc-brand"><span class="brand-mark">V</span><span class="brand-word">vcc<em>hub</em></span></div>
+          <button class="console-menu" aria-label="Menu">☰</button>
+          <div class="console-search">⌕ &nbsp; Search Here…</div>
+          <div class="console-spacer"></div><span>文⌄</span><span>⚙</span>
+        </header>
+        <div class="console-layout">
+          <aside class="console-sidebar">
+            <button class="console-nav active">▤ &nbsp; Cards</button>
+            <button class="console-nav">••• &nbsp; More</button>
+            <small>Pinned</small>
+            <small>Recent Used</small>
+            <button class="console-link">Wallet Card</button>
+            <button class="console-link" data-action="add-card">Add Wallet Card</button>
+            <button class="console-link" data-action="return-olly">← Ollylife</button>
+          </aside>
+          <section class="console-main">
+            <div data-wallet-overview>
+              <div class="console-title-row">
+                <div><p>VCCHUB Wallet</p><h1>Cards</h1></div>
+                <div class="console-actions"><button class="btn btn-outline" data-action="open-topup">＋ Top up</button><button class="btn btn-violet" data-action="add-card" id="add-card-button">＋ Add Card</button></div>
+              </div>
+              <div class="console-tabs"><span class="active">Wallet Card</span><span>Transactions</span></div>
+              <div class="balance-tiles">
+                <article><span>Wallet Balance</span><strong data-wallet-balance>SGD 0.00</strong></article>
+                <article><span>Card Balance</span><strong data-card-balance>SGD 0.00</strong></article>
+                <article class="commission-tile"><span>Ollylife Commission Available</span><strong data-commission-balance>SGD 3,250.00</strong><small>Checked through Ollylife demo API</small></article>
+              </div>
+              <div class="wallet-rule" id="card-rule">Top up the wallet from your Ollylife commission before creating a card.</div>
+              <div class="console-table">
+                <div class="console-table-head"><span>Cardholder Name</span><span>Scheme Network</span><span>Card No</span><span>Currency</span><span>Status</span><span>Card Balance</span></div>
+                <div class="empty-cards" data-empty-cards><strong>No cards yet</strong><span>Your verified wallet starts with a zero balance and no card.</span></div>
+                <div class="console-card-row" data-card-row hidden><span data-cardholder-name>—</span><span>Visa</span><span>•••• <b data-card-last4>—</b></span><span>SGD</span><span class="event-ok">● Active</span><span>SGD 0.00</span></div>
+              </div>
+              <div class="api-trace" data-api-trace hidden></div>
+            </div>
+
+            <div data-card-form hidden>
+              <div class="console-title-row"><div><p>Cards / Cardholders Management</p><h1>Create wallet card</h1></div><button class="btn btn-outline" data-action="cancel-card">Cancel</button></div>
+              <div class="card-form-note">Cardholder information came from verified Sumsub document data and VCCHUB registration. Please provide the missing billing address.</div>
+              <form id="card-form" class="cardholder-form">
+                <section>
+                  <h2>Cardholder Information</h2>
+                  <div class="form-grid two">
+                    <label>First Name<input class="input" data-first-name-value readonly /></label>
+                    <label>Last Name<input class="input" data-last-name-value readonly /></label>
+                    <label>Date of Birth<input class="input" data-dob-value readonly /></label>
+                    <label>Email<input class="input" data-email-value readonly /></label>
+                    <label>Mobile Number<input class="input" data-phone-value readonly /></label>
+                  </div>
+                </section>
+                <section>
+                  <h2>Billing Address</h2>
+                  <div class="form-grid two">
+                    <label>Country / Region *<select class="input" id="billing-country" required><option value="Singapore">Singapore</option><option value="China">China</option></select></label>
+                    <label>State / Province *<input class="input" id="billing-state" placeholder="e.g. Singapore" required /></label>
+                    <label>City *<input class="input" id="billing-city" placeholder="e.g. Singapore" required /></label>
+                    <label>Postal code *<input class="input" id="billing-postal" placeholder="e.g. 018956" required /></label>
+                    <label class="full">Address *<input class="input" id="billing-address" placeholder="Street, building and unit number" required /></label>
+                  </div>
+                </section>
+                <div class="card-form-actions"><button class="btn btn-outline" type="button" data-action="cancel-card">Cancel</button><button class="btn btn-violet" type="submit">Create card →</button></div>
+              </form>
+            </div>
+          </section>
+        </div>
+      </main>
+    </template>
+
+    <template id="topup-modal-template">
+      <div class="modal-backdrop" role="presentation" data-action="backdrop-close">
+        <section class="modal topup-modal" role="dialog" aria-modal="true" aria-labelledby="topup-title">
+          <div class="modal-head"><div class="modal-icon">↗</div><h2 id="topup-title">Top up from Ollylife commission</h2><p>VCCHUB checks the available commission balance with Ollylife before debiting commission and crediting the wallet.</p></div>
+          <div class="modal-body">
+            <div class="transfer-route"><span>Ollylife commission<br/><strong data-commission-balance>SGD 3,250.00</strong></span><b>→ API →</b><span>VCCHUB wallet<br/><strong data-wallet-balance>SGD 0.00</strong></span></div>
+            <div class="field"><label for="topup-amount">Top-up amount (SGD)</label><input class="input" id="topup-amount" type="number" min="1" step="0.01" value="500.00" /><span class="field-error" id="topup-error"></span></div>
+          </div>
+          <div class="modal-actions"><button class="btn btn-outline" data-action="close-topup">Cancel</button><button class="btn btn-violet" data-action="confirm-topup">Check balance &amp; top up →</button></div>
+        </section>
+      </div>
+    </template>
+    <div id="toast-region" class="toast-region" aria-live="polite"></div>
+    <script src="https://static.sumsub.com/idensic/static/sns-websdk-builder.js" defer></script>
+    <script src="app.js" defer></script>
+  </body>
+</html>
