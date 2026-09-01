@@ -423,9 +423,9 @@
               </div>
               <div class="wallet-rule" id="card-rule">Top up the wallet from your Ollylife commission before creating a card.</div>
               <div class="console-table">
-                <div class="console-table-head"><span>Cardholder Name</span><span>Card Type</span><span>Card No</span><span>Currency</span><span>Status</span><span>Card Balance</span></div>
+                <div class="console-table-head"><span>Cardholder Name</span><span>Card Type</span><span>Card No</span><span>Currency</span><span>Status</span><span>Card Balance</span><span>Action</span></div>
                 <div class="empty-cards" data-empty-cards><strong>No cards yet</strong><span>Your verified wallet starts with a zero balance and no card.</span></div>
-                <div class="console-card-row" data-card-row hidden><span data-cardholder-name>—</span><span data-card-type>—</span><span>•••• <b data-card-last4>—</b></span><span>SGD</span><span class="event-ok">● Active</span><span>SGD 0.00</span></div>
+                <div class="console-card-row" data-card-row hidden><span data-cardholder-name>—</span><span data-card-type>—</span><span>•••• <b data-card-last4>—</b></span><span>SGD</span><span class="event-ok">● Active</span><span data-selected-card-balance>SGD 0.00</span><span class="console-card-action"><button class="card-more-button" data-action="toggle-card-menu" aria-label="Card actions">•••</button><span class="card-action-popover" data-card-action-menu hidden><button data-action="view-card">View card</button><button data-action="view-card-transactions">View transactions</button><button class="primary" data-action="open-card-topup">Top up</button></span></span></div>
               </div>
               <div class="api-trace" data-api-trace hidden></div>
             </div>
@@ -521,6 +521,27 @@
           </div>
           <div class="modal-actions"><button class="btn btn-outline" data-action="close-topup">Cancel</button><button class="btn btn-violet" data-action="confirm-topup">Check balance &amp; top up →</button></div>
         </section>
+      </div>
+    </template>
+    <template id="card-topup-drawer-template">
+      <div class="card-drawer-backdrop" data-action="card-topup-backdrop">
+        <aside class="card-topup-drawer" role="dialog" aria-modal="true" aria-labelledby="card-topup-title">
+          <header class="card-drawer-head">
+            <div><h2 id="card-topup-title">Top up card</h2><p>Transfer funds from the VCCHUB wallet to this card.</p></div>
+            <button data-action="close-card-topup" aria-label="Close card top up">×</button>
+          </header>
+          <div class="card-drawer-body">
+            <div class="card-topup-summary"><span>Card number<strong>•••• <b data-card-last4>—</b></strong></span><span>Card balance<strong data-selected-card-balance>SGD 0.00</strong></span></div>
+            <div class="field">
+              <div class="card-topup-label"><label for="card-topup-amount">Deposit amount <span class="required">*</span></label><strong>Wallet balance: <span data-wallet-balance>SGD 0.00</span></strong></div>
+              <div class="money-input"><input class="input" id="card-topup-amount" type="number" min="0.01" step="0.01" value="0.00" /><span>SGD</span></div>
+              <span class="field-error" id="card-topup-error"></span>
+            </div>
+            <div class="card-topup-total"><span>Total transfer</span><strong data-card-topup-total>SGD 0.00</strong></div>
+            <div class="field"><label for="card-topup-password">Password <span class="required">*</span></label><input class="input" id="card-topup-password" type="password" autocomplete="current-password" placeholder="Enter your VCCHUB password" /></div>
+            <button class="btn btn-violet btn-wide" data-action="confirm-card-topup">Confirm top up</button>
+          </div>
+        </aside>
       </div>
     </template>
     <div id="toast-region" class="toast-region" aria-live="polite"></div>

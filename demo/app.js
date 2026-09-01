@@ -29,6 +29,8 @@ function initialState() {
     deliveryRecipientSelection: "billing",
     apiTrace: [],
     topupOpen: false,
+    cardTopupOpen: false,
+    cardActionMenuOpen: false,
     walletView: "overview",
     authMethod: "sso",
     twoFactorCode: "",
@@ -175,6 +177,7 @@ function fillDynamicAccountData() {
   const firstCard = state.cards[0];
   fillAll("[data-card-last4]", firstCard ? firstCard.last4 : "—");
   fillAll("[data-card-type]", firstCard ? (firstCard.type === "PHYSICAL" ? "Physical" : "Virtual") : "—");
+  fillAll("[data-selected-card-balance]", formatMoney(firstCard ? Number(firstCard.balance || 0) : 0));
   document.querySelectorAll("[data-first-name-value]").forEach(function (input) { input.value = state.firstName; });
   document.querySelectorAll("[data-last-name-value]").forEach(function (input) { input.value = state.lastName; });
   document.querySelectorAll("[data-dob-value]").forEach(function (input) { input.value = state.dob; });
@@ -256,6 +259,10 @@ function render() {
       app.appendChild(document.getElementById("topup-modal-template").content.cloneNode(true));
       fillDynamicAccountData();
     }
+    if (state.cardTopupOpen) {
+      app.appendChild(document.getElementById("card-topup-drawer-template").content.cloneNode(true));
+      fillDynamicAccountData();
+    }
   }
 
   window.scrollTo({ top: 0, behavior: "smooth" });
@@ -275,8 +282,11 @@ function renderWallet() {
   const rule = document.getElementById("card-rule");
   if (rule) {
     rule.classList.toggle("ready", state.walletBalance > 0);
+    const totalCardBalance = state.cards.reduce(function (total, card) { return total + Number(card.balance || 0); }, 0);
     rule.textContent = state.cards.length
-      ? "Card created successfully. Wallet funds remain separate until assigned to the card."
+      ? totalCardBalance > 0
+        ? "Card funded successfully. Use the card action menu to add more funds from the wallet."
+        : "Card created successfully. Use the card action menu to assign wallet funds to the card."
       : state.walletBalance > 0
         ? "Wallet funded. Card creation is now available."
         : "Top up the wallet from your Ollylife commission before creating a card.";
@@ -285,6 +295,8 @@ function renderWallet() {
   const row = document.querySelector("[data-card-row]");
   if (empty) empty.hidden = state.cards.length > 0;
   if (row) row.hidden = state.cards.length === 0;
+  const cardMenu = document.querySelector("[data-card-action-menu]");
+  if (cardMenu) cardMenu.hidden = !state.cardActionMenuOpen;
   const trace = document.querySelector("[data-api-trace]");
   if (trace && state.apiTrace.length) {
     trace.hidden = false;
@@ -642,6 +654,11 @@ document.addEventListener("input", function (event) {
     state.twoFactorCode = event.target.value;
     const error = document.getElementById("twofa-error");
     if (error) error.textContent = "";
+  } else if (event.target.id === "card-topup-amount") {
+    const total = document.querySelector("[data-card-topup-total]");
+    if (total) total.textContent = formatMoney(Math.max(0, Number(event.target.value) || 0));
+    const error = document.getElementById("card-topup-error");
+    if (error) error.textContent = "";
   }
 });
 
@@ -832,6 +849,8 @@ document.addEventListener("click", async function (event) {
     state.stage = state.authMethod === "password" ? "login" : "returning";
     render();
   } else if (action === "open-topup") {
+    state.cardActionMenuOpen = false;
+    state.cardTopupOpen = false;
     state.topupOpen = true;
     render();
   } else if (action === "close-topup") {
@@ -873,6 +892,83 @@ document.addEventListener("click", async function (event) {
       target.textContent = "Check balance & top up →";
       error.textContent = requestError.message;
     }
+  } else if (action === "toggle-card-menu") {
+    state.cardActionMenuOpen = !state.cardActionMenuOpen;
+    render();
+  } else if (action === "view-card") {
+    state.cardActionMenuOpen = false;
+    render();
+    showToast("Card details", "The full card details view is outside this demo scope.");
+  } else if (action === "view-card-transactions") {
+    state.cardActionMenuOpen = false;
+    render();
+    showToast("Card transactions", state.transactions.length ? String(state.transactions.length) + " wallet and card transaction(s) recorded." : "No card transactions yet.");
+  } else if (action === "open-card-topup") {
+    if (!state.cards.length) return;
+    state.cardActionMenuOpen = false;
+    state.topupOpen = false;
+    state.cardTopupOpen = true;
+    render();
+  } else if (action === "close-card-topup") {
+    state.cardTopupOpen = false;
+    render();
+  } else if (action === "card-topup-backdrop" && event.target === target) {
+    state.cardTopupOpen = false;
+    render();
+  } else if (action === "confirm-card-topup") {
+    const amountInput = document.getElementById("card-topup-amount");
+    const passwordInput = document.getElementById("card-topup-password");
+    const error = document.getElementById("card-topup-error");
+    const amount = Number(amountInput.value);
+    if (!Number.isFinite(amount) || amount <= 0) {
+      error.textContent = "Enter an amount greater than zero.";
+      return;
+    }
+    if (amount > state.walletBalance) {
+      error.textContent = "The amount exceeds the available wallet balance.";
+      return;
+    }
+    if (!passwordInput.value) {
+      error.textContent = "Enter your VCCHUB password.";
+      passwordInput.focus();
+      return;
+    }
+    if (state.password && passwordInput.value !== state.password) {
+      error.textContent = "The VCCHUB password is incorrect.";
+      passwordInput.focus();
+      return;
+    }
+    target.disabled = true;
+    target.textContent = "Processing top up…";
+    try {
+      const card = state.cards[0];
+      const result = await postJson("/api/vcchub/cards/topups", {
+        externalUserId: state.externalUserId,
+        cardId: card.id,
+        amount: amount,
+        walletBalance: state.walletBalance,
+        commissionBalance: state.commissionBalance,
+        cards: state.cards,
+        transactions: state.transactions,
+        cardholder: {
+          id: state.cardholderId,
+          firstName: state.firstName,
+          lastName: state.lastName,
+          dob: state.dob,
+          email: state.email,
+          phone: state.phoneCode + state.phone.replace(/\s/g, ""),
+        },
+      });
+      syncAccountPayload(result);
+      state.apiTrace = result.apiTrace || [];
+      state.cardTopupOpen = false;
+      render();
+      showToast("Card topped up", formatMoney(amount) + " was transferred from the VCCHUB wallet to card •••• " + card.last4 + ".");
+    } catch (requestError) {
+      target.disabled = false;
+      target.textContent = "Confirm top up";
+      error.textContent = requestError.message;
+    }
   } else if (action === "add-card") {
     if (!state.cardholderId) {
       showToast("Cardholder required", "Complete the live Sumsub verification before creating a card.");
@@ -909,9 +1005,11 @@ document.addEventListener("change", function (event) {
 });
 
 document.addEventListener("keydown", function (event) {
-  if (event.key === "Escape" && (state.modalOpen || state.topupOpen)) {
+  if (event.key === "Escape" && (state.modalOpen || state.topupOpen || state.cardTopupOpen)) {
     state.modalOpen = false;
     state.topupOpen = false;
+    state.cardTopupOpen = false;
+    state.cardActionMenuOpen = false;
     render();
   }
 });

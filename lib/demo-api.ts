@@ -135,6 +135,46 @@ export function createCard(payload: JsonRecord) {
   };
 }
 
+export function topUpCard(payload: JsonRecord) {
+  const amount = number(payload, 'amount');
+  const walletBalance = number(payload, 'walletBalance');
+  const cardId = text(payload, 'cardId');
+  const cards = Array.isArray(payload.cards) ? payload.cards as JsonRecord[] : [];
+  if (amount <= 0) throw new Error('Card top-up amount must be greater than zero.');
+  if (amount > walletBalance) {
+    return { conflict: true, error: 'Insufficient VCCHUB wallet balance.' };
+  }
+  if (!cardId) throw new Error('cardId is required.');
+  if (!cards.some((card) => text(card, 'id') === cardId)) throw new Error('Card not found.');
+
+  const updatedCards = cards.map((card) =>
+    text(card, 'id') === cardId
+      ? { ...card, balance: Math.round((number(card, 'balance') + amount) * 100) / 100 }
+      : card,
+  );
+  const transaction = {
+    id: `ctx_${randomUUID().replaceAll('-', '').slice(0, 10)}`,
+    type: 'Wallet to card top-up',
+    cardId,
+    amount,
+    status: 'COMPLETED',
+  };
+
+  return {
+    commissionBalance: number(payload, 'commissionBalance'),
+    walletBalance: Math.round((walletBalance - amount) * 100) / 100,
+    cardholder: payload.cardholder ?? null,
+    cards: updatedCards,
+    transactions: [transaction, ...(Array.isArray(payload.transactions) ? payload.transactions : [])],
+    transaction,
+    apiTrace: [
+      'VCCHUB: check wallet balance',
+      'VCCHUB: debit wallet balance',
+      'VCCHUB: credit selected card balance',
+    ],
+  };
+}
+
 export function errorResponse(error: unknown) {
   const message = error instanceof Error ? error.message : 'The request could not be completed.';
   return Response.json({ error: message }, { status: 400 });
