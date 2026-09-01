@@ -388,16 +388,15 @@
           <div class="twofa-icon">⌁</div>
           <div class="twofa-method" data-twofa-method>Secure sign-in</div>
           <h1>Verify it’s you</h1>
-          <p>Enter the six-digit verification code for <strong data-email-text></strong> before accessing your wallet.</p>
-          <div class="demo-code"><span>Demo verification code</span><strong>123456</strong><small>No email or SMS is sent in this demonstration.</small></div>
+          <p>We sent a six-digit verification code to <strong data-email-text></strong>. Enter it below to continue.</p>
           <form id="twofa-form">
-            <label for="twofa-code">Six-digit code</label>
+            <label for="twofa-code">Verification code</label>
             <input class="twofa-input" id="twofa-code" inputmode="numeric" autocomplete="one-time-code" maxlength="6" pattern="[0-9]{6}" placeholder="000000" required />
             <span class="field-error" id="twofa-error"></span>
             <button class="btn btn-violet btn-wide" type="submit">Verify &amp; continue →</button>
           </form>
-          <div class="twofa-actions"><button type="button" data-action="resend-2fa">Resend mock code</button><button type="button" data-action="back-twofa">← Back</button></div>
-          <div class="twofa-security">🔒 This extra verification step applies to both Ollylife SSO and direct VCCHUB login.</div>
+          <div class="twofa-actions"><button type="button" data-action="resend-2fa">Resend code</button><button type="button" data-action="back-twofa">← Back</button></div>
+          <div class="twofa-security">🔒 For your security, never share this verification code with anyone.</div>
         </section>
       </main>
     </template>

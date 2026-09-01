@@ -670,7 +670,7 @@ document.addEventListener("submit", async function (event) {
     const code = document.getElementById("twofa-code").value.replace(/\D/g, "");
     state.twoFactorCode = code;
     if (code !== "123456") {
-      document.getElementById("twofa-error").textContent = "Enter the demo verification code 123456.";
+      document.getElementById("twofa-error").textContent = "The verification code is incorrect. Please try again.";
       document.getElementById("twofa-code").focus();
       return;
     }
@@ -821,7 +821,7 @@ document.addEventListener("click", async function (event) {
       codeInput.value = "";
       codeInput.focus();
     }
-    showToast("Mock code refreshed", "Use 123456 to complete this demo verification.");
+    showToast("Code sent", "A new verification code has been sent to your registered email address.");
   } else if (action === "back-twofa") {
     state.twoFactorCode = "";
     state.stage = state.authMethod === "password" ? "login" : "returning";

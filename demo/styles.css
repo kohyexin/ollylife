@@ -522,10 +522,6 @@ a { color: inherit; }
 .twofa-card h1 { margin: 13px 0 0; font-family: 'Manrope', sans-serif; font-size: 27px; letter-spacing: -.035em; }
 .twofa-card > p { max-width: 350px; margin: 9px auto 20px; color: #7b8491; font-size: 11px; line-height: 1.65; }
 .twofa-card > p strong { color: #3d4653; }
-.demo-code { display: grid; gap: 4px; margin-bottom: 20px; padding: 13px; border: 1px dashed #cfc8ff; border-radius: 11px; background: #faf9ff; }
-.demo-code span { color: #7a8492; font-size: 8px; font-weight: 800; text-transform: uppercase; letter-spacing: .07em; }
-.demo-code strong { color: #4f3fc4; font-family: Consolas, monospace; font-size: 20px; letter-spacing: .22em; }
-.demo-code small { color: #9098a3; font-size: 8px; }
 #twofa-form { text-align: left; }
 #twofa-form > label { color: #4f5968; font-size: 10px; font-weight: 800; }
 .twofa-input { width: 100%; height: 52px; margin-top: 7px; border: 1px solid #d8dce5; border-radius: 11px; outline: none; color: #313846; background: #fff; font-family: Consolas, monospace; font-size: 22px; font-weight: 700; letter-spacing: .32em; text-align: center; box-sizing: border-box; }
