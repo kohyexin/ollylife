@@ -169,6 +169,7 @@ function fillDynamicAccountData() {
   fillAll("[data-cardholder-name]", ((state.firstName + " " + state.lastName).trim() || "—"));
   const firstCard = state.cards[0];
   fillAll("[data-card-last4]", firstCard ? firstCard.last4 : "—");
+  fillAll("[data-card-type]", firstCard ? (firstCard.type === "PHYSICAL" ? "Physical" : "Virtual") : "—");
   document.querySelectorAll("[data-first-name-value]").forEach(function (input) { input.value = state.firstName; });
   document.querySelectorAll("[data-last-name-value]").forEach(function (input) { input.value = state.lastName; });
   document.querySelectorAll("[data-dob-value]").forEach(function (input) { input.value = state.dob; });
@@ -194,7 +195,7 @@ function render() {
     document.querySelector("[data-wallet-inactive]").hidden = state.stage === "returning";
     document.querySelector("[data-wallet-ready]").hidden = state.stage !== "returning";
     fillAll("[data-wallet-count]", state.stage === "returning" ? String(state.cards.length) : "—");
-    fillAll("[data-wallet-note]", state.stage === "returning" ? (state.cards.length ? "Virtual card active" : "Top up before creating a card") : "Activate to unlock");
+    fillAll("[data-wallet-note]", state.stage === "returning" ? (state.cards.length ? ((state.cards[0].type === "PHYSICAL" ? "Physical" : "Virtual") + " card active") : "Top up before creating a card") : "Activate to unlock");
     const portalCard = document.querySelector("[data-portal-card]");
     if (portalCard) portalCard.hidden = state.cards.length === 0;
     if (state.modalOpen) {
@@ -275,6 +276,34 @@ function renderWallet() {
     trace.innerHTML = "<strong>Latest API flow</strong>" + state.apiTrace.map(function (item) { return "<span>✓ " + escapeHtml(item) + "</span>"; }).join("");
   }
   fillDynamicAccountData();
+  updateCardTypeForm();
+}
+
+function addressFrom(prefix) {
+  return {
+    country: document.getElementById(prefix + "-country").value,
+    state: document.getElementById(prefix + "-state").value.trim(),
+    city: document.getElementById(prefix + "-city").value.trim(),
+    address: document.getElementById(prefix + "-address").value.trim(),
+    postalCode: document.getElementById(prefix + "-postal").value.trim(),
+  };
+}
+
+function updateCardTypeForm() {
+  const selected = document.querySelector('input[name="card-type"]:checked');
+  const deliverySection = document.getElementById("delivery-section");
+  if (!selected || !deliverySection) return;
+  const isPhysical = selected.value === "PHYSICAL";
+  const sameAsBilling = document.getElementById("delivery-same-as-billing");
+  const deliveryFields = document.getElementById("delivery-address-fields");
+  const confirmDelivery = document.getElementById("confirm-delivery");
+  deliverySection.hidden = !isPhysical;
+  const useBilling = Boolean(sameAsBilling && sameAsBilling.checked);
+  if (deliveryFields) deliveryFields.hidden = !isPhysical || useBilling;
+  document.querySelectorAll("[data-delivery-field]").forEach(function (field) {
+    field.required = isPhysical && !useBilling;
+  });
+  if (confirmDelivery) confirmDelivery.required = isPhysical;
 }
 
 function updatePasswordMeter() {
@@ -543,6 +572,12 @@ document.addEventListener("submit", async function (event) {
     submit.disabled = true;
     submit.textContent = "Creating card…";
     try {
+      const cardType = document.querySelector('input[name="card-type"]:checked').value;
+      const billingAddress = addressFrom("billing");
+      const sameAsBilling = document.getElementById("delivery-same-as-billing").checked;
+      const deliveryAddress = cardType === "PHYSICAL"
+        ? (sameAsBilling ? billingAddress : addressFrom("delivery"))
+        : null;
       const result = await postJson("/api/vcchub/cards", {
         externalUserId: state.externalUserId,
         cardholderId: state.cardholderId,
@@ -555,23 +590,21 @@ document.addEventListener("submit", async function (event) {
           email: state.email,
           phone: state.phoneCode + state.phone.replace(/\s/g, ""),
         },
-        billingAddress: {
-          country: document.getElementById("billing-country").value,
-          state: document.getElementById("billing-state").value.trim(),
-          city: document.getElementById("billing-city").value.trim(),
-          address: document.getElementById("billing-address").value.trim(),
-          postalCode: document.getElementById("billing-postal").value.trim(),
-        },
+        cardType: cardType,
+        billingAddress: billingAddress,
+        deliveryAddress: deliveryAddress,
+        deliveryAddressConfirmed: cardType !== "PHYSICAL" || document.getElementById("confirm-delivery").checked,
       });
       syncAccountPayload(result);
       state.apiTrace = [
         "VCCHUB validated funded wallet and active cardholder",
         "VCCHUB saved the billing address",
-        "VCCHUB created the virtual card",
+        cardType === "PHYSICAL" ? "VCCHUB confirmed the physical card delivery address" : "VCCHUB prepared instant virtual card issuance",
+        "VCCHUB created the " + cardType.toLowerCase() + " card",
       ];
       state.walletView = "overview";
       render();
-      showToast("Virtual card created", "The new card is active with a card balance of SGD 0.00.");
+      showToast(cardType === "PHYSICAL" ? "Physical card ordered" : "Virtual card created", cardType === "PHYSICAL" ? "The card is active and its delivery address has been confirmed." : "The new card is active with a card balance of SGD 0.00.");
     } catch (error) {
       submit.disabled = false;
       submit.textContent = "Create card →";
@@ -694,7 +727,7 @@ document.addEventListener("click", async function (event) {
     } else if (state.walletBalance <= 0) {
       showToast("Top up required", "Add funds from the Ollylife commission balance first.");
     } else if (state.cards.length) {
-      showToast("Card already created", "This demo wallet already has an active virtual card.");
+      showToast("Card already created", "This demo wallet already has an active card.");
     } else {
       state.walletView = "card-form";
       render();
@@ -712,6 +745,12 @@ document.addEventListener("click", async function (event) {
     state = initialState();
     render();
     showToast("Demo reset", "The wallet journey is ready to present again.");
+  }
+});
+
+document.addEventListener("change", function (event) {
+  if (event.target.name === "card-type" || event.target.id === "delivery-same-as-billing") {
+    updateCardTypeForm();
   }
 });
 

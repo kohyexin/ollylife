@@ -77,6 +77,10 @@ export function createCard(payload: JsonRecord) {
 
   const cardholder = (payload.cardholder ?? {}) as JsonRecord;
   const billingAddress = (payload.billingAddress ?? {}) as JsonRecord;
+  const cardType = text(payload, 'cardType').toUpperCase() || 'VIRTUAL';
+  if (!['VIRTUAL', 'PHYSICAL'].includes(cardType)) {
+    throw new Error('Card type must be VIRTUAL or PHYSICAL.');
+  }
   if (!text(cardholder, 'firstName') || !text(cardholder, 'lastName')) {
     throw new Error('Create the VCCHUB cardholder before creating a card.');
   }
@@ -84,14 +88,30 @@ export function createCard(payload: JsonRecord) {
   const missing = requiredAddress.filter((field) => !text(billingAddress, field));
   if (missing.length) throw new Error(`Missing billing address fields: ${missing.join(', ')}`);
 
+  let deliveryAddress: JsonRecord | null = null;
+  if (cardType === 'PHYSICAL') {
+    deliveryAddress = (payload.deliveryAddress ?? {}) as JsonRecord;
+    const missingDelivery = requiredAddress.filter((field) => !text(deliveryAddress as JsonRecord, field));
+    if (missingDelivery.length) {
+      throw new Error(`Missing delivery address fields: ${missingDelivery.join(', ')}`);
+    }
+    if (payload.deliveryAddressConfirmed !== true) {
+      throw new Error('Confirm the physical card delivery address before creating the card.');
+    }
+  }
+
   const card = {
     id: `card_${randomUUID().replaceAll('-', '').slice(0, 12)}`,
     last4: randomInt(0, 10000).toString().padStart(4, '0'),
     cardholderName: `${text(cardholder, 'firstName')} ${text(cardholder, 'lastName')}`,
+    type: cardType,
+    schemeNetwork: 'Visa',
     currency: 'SGD',
     status: 'ACTIVE',
     balance: 0,
     billingAddress,
+    deliveryAddress,
+    fulfillmentStatus: cardType === 'PHYSICAL' ? 'PROCESSING' : 'ISSUED',
   };
 
   return {

@@ -412,16 +412,16 @@
               </div>
               <div class="wallet-rule" id="card-rule">Top up the wallet from your Ollylife commission before creating a card.</div>
               <div class="console-table">
-                <div class="console-table-head"><span>Cardholder Name</span><span>Scheme Network</span><span>Card No</span><span>Currency</span><span>Status</span><span>Card Balance</span></div>
+                <div class="console-table-head"><span>Cardholder Name</span><span>Card Type</span><span>Card No</span><span>Currency</span><span>Status</span><span>Card Balance</span></div>
                 <div class="empty-cards" data-empty-cards><strong>No cards yet</strong><span>Your verified wallet starts with a zero balance and no card.</span></div>
-                <div class="console-card-row" data-card-row hidden><span data-cardholder-name>—</span><span>Visa</span><span>•••• <b data-card-last4>—</b></span><span>SGD</span><span class="event-ok">● Active</span><span>SGD 0.00</span></div>
+                <div class="console-card-row" data-card-row hidden><span data-cardholder-name>—</span><span data-card-type>—</span><span>•••• <b data-card-last4>—</b></span><span>SGD</span><span class="event-ok">● Active</span><span>SGD 0.00</span></div>
               </div>
               <div class="api-trace" data-api-trace hidden></div>
             </div>
 
             <div data-card-form hidden>
               <div class="console-title-row"><div><p>Cards / Cardholders Management</p><h1>Create wallet card</h1></div><button class="btn btn-outline" data-action="cancel-card">Cancel</button></div>
-              <div class="card-form-note">Cardholder information came from verified Sumsub document data and VCCHUB registration. Please provide the missing billing address.</div>
+              <div class="card-form-note">Cardholder information came from verified Sumsub document data and VCCHUB registration. Choose a card type and provide the required address details.</div>
               <form id="card-form" class="cardholder-form">
                 <section>
                   <h2>Cardholder Information</h2>
@@ -434,6 +434,21 @@
                   </div>
                 </section>
                 <section>
+                  <h2>Choose Card Type</h2>
+                  <div class="card-type-grid">
+                    <label class="card-type-option">
+                      <input type="radio" name="card-type" value="VIRTUAL" checked />
+                      <span class="card-type-icon">▣</span>
+                      <span><strong>Virtual Card</strong><small>Created instantly and ready for online use.</small></span>
+                    </label>
+                    <label class="card-type-option">
+                      <input type="radio" name="card-type" value="PHYSICAL" />
+                      <span class="card-type-icon">▤</span>
+                      <span><strong>Physical Card</strong><small>Delivered to an address you confirm below.</small></span>
+                    </label>
+                  </div>
+                </section>
+                <section>
                   <h2>Billing Address</h2>
                   <div class="form-grid two">
                     <label>Country / Region *<select class="input" id="billing-country" required><option value="Singapore">Singapore</option><option value="China">China</option></select></label>
@@ -442,6 +457,18 @@
                     <label>Postal code *<input class="input" id="billing-postal" placeholder="e.g. 018956" required /></label>
                     <label class="full">Address *<input class="input" id="billing-address" placeholder="Street, building and unit number" required /></label>
                   </div>
+                </section>
+                <section id="delivery-section" hidden>
+                  <div class="section-title-row"><div><h2>Physical Card Delivery</h2><p>Confirm where VCCHUB should deliver the physical card.</p></div><span class="physical-badge">Physical only</span></div>
+                  <label class="check-row delivery-choice"><input type="checkbox" id="delivery-same-as-billing" checked /><span>Use the billing address above as the delivery address</span></label>
+                  <div class="form-grid two" id="delivery-address-fields" hidden>
+                    <label>Country / Region *<select class="input" id="delivery-country" data-delivery-field><option value="Singapore">Singapore</option><option value="China">China</option></select></label>
+                    <label>State / Province *<input class="input" id="delivery-state" data-delivery-field placeholder="e.g. Singapore" /></label>
+                    <label>City *<input class="input" id="delivery-city" data-delivery-field placeholder="e.g. Singapore" /></label>
+                    <label>Postal code *<input class="input" id="delivery-postal" data-delivery-field placeholder="e.g. 018956" /></label>
+                    <label class="full">Delivery address *<input class="input" id="delivery-address" data-delivery-field placeholder="Street, building and unit number" /></label>
+                  </div>
+                  <label class="check-row delivery-confirm"><input type="checkbox" id="confirm-delivery" /><span>I confirm that the delivery address is complete and correct.</span></label>
                 </section>
                 <div class="card-form-actions"><button class="btn btn-outline" type="button" data-action="cancel-card">Cancel</button><button class="btn btn-violet" type="submit">Create card →</button></div>
               </form>
