@@ -76,7 +76,7 @@
                   <button class="btn btn-mint" data-action="open-sso">Open my VCCHUB wallet ↗</button>
                   <button class="tiny-link" data-action="direct-login">Use VCCHUB login instead</button>
                 </div>
-                <div class="sso-note">◆ Secure single sign-on — no VCCHUB password required</div>
+                <div class="sso-note">◆ Secure single sign-on — no VCCHUB password required; 2FA verification still applies</div>
               </article>
               <article class="member-card">
                 <div class="member-icon">$</div>
@@ -198,8 +198,9 @@
               </div>
               <h2 class="section-title">User information</h2>
               <div class="field">
-                <label for="username">Username <span class="required">*</span></label>
-                <input class="input" id="username" autocomplete="username" />
+                <label for="username">Username (email address) <span class="required">*</span></label>
+                <input class="input" id="username" type="email" autocomplete="username" readonly />
+                <small class="field-help">Your username is the email address confirmed for this wallet invitation.</small>
                 <span class="field-error" data-error="username"></span>
               </div>
               <div class="field">
@@ -364,18 +365,39 @@
             <h1>Welcome back</h1>
             <p>Sign in directly with the VCCHUB details you registered.</p>
             <div class="field">
-              <label for="login-email">Email address</label>
-              <input class="input" id="login-email" type="email" data-email-value autocomplete="email" />
+              <label for="login-email">Username (email address)</label>
+              <input class="input" id="login-email" type="email" data-email-value autocomplete="username" required />
             </div>
             <div class="field">
               <label for="login-password">Password</label>
-              <input class="input" id="login-password" type="password" value="DemoPass1" autocomplete="current-password" />
+              <input class="input" id="login-password" type="password" value="DemoPass1" autocomplete="current-password" required />
             </div>
             <a class="forgot" href="#" data-action="prevent">Forgot password?</a>
             <button class="btn btn-violet btn-wide" type="submit">Sign in →</button>
             <div class="login-note">Direct VCCHUB access requires the login details created during registration.</div>
             <button class="btn btn-ghost" type="button" data-action="return-olly">← Return to Ollylife</button>
           </form>
+        </section>
+      </main>
+    </template>
+
+    <template id="twofa-template">
+      <main class="twofa-shell">
+        <section class="twofa-card">
+          <div class="brand vcc-brand"><span class="brand-mark">V</span><span class="brand-word">vcc<em>hub</em></span></div>
+          <div class="twofa-icon">⌁</div>
+          <div class="twofa-method" data-twofa-method>Secure sign-in</div>
+          <h1>Verify it’s you</h1>
+          <p>Enter the six-digit verification code for <strong data-email-text></strong> before accessing your wallet.</p>
+          <div class="demo-code"><span>Demo verification code</span><strong>123456</strong><small>No email or SMS is sent in this demonstration.</small></div>
+          <form id="twofa-form">
+            <label for="twofa-code">Six-digit code</label>
+            <input class="twofa-input" id="twofa-code" inputmode="numeric" autocomplete="one-time-code" maxlength="6" pattern="[0-9]{6}" placeholder="000000" required />
+            <span class="field-error" id="twofa-error"></span>
+            <button class="btn btn-violet btn-wide" type="submit">Verify &amp; continue →</button>
+          </form>
+          <div class="twofa-actions"><button type="button" data-action="resend-2fa">Resend mock code</button><button type="button" data-action="back-twofa">← Back</button></div>
+          <div class="twofa-security">🔒 This extra verification step applies to both Ollylife SSO and direct VCCHUB login.</div>
         </section>
       </main>
     </template>

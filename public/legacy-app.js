@@ -6,7 +6,7 @@ function initialState() {
     stage: "portal",
     modalOpen: false,
     email: "olivia.chen@ollylife.com",
-    username: "olivia.chen",
+    username: "olivia.chen@ollylife.com",
     phoneCode: "+65",
     phone: "8123 4567",
     password: "",
@@ -31,6 +31,8 @@ function initialState() {
     apiTrace: [],
     topupOpen: false,
     walletView: "overview",
+    authMethod: "sso",
+    twoFactorCode: "",
     completingKyc: false,
     sumsubConfigured: false,
     sumsubStarted: false,
@@ -49,7 +51,8 @@ const stageRank = {
   success: 4,
   returning: 5,
   login: 5,
-  wallet: 6,
+  twofa: 6,
+  wallet: 7,
 };
 
 const journey = [
@@ -220,7 +223,8 @@ function render() {
   }
 
   if (state.stage === "registration") {
-    document.getElementById("username").value = state.username;
+    state.username = state.email;
+    document.getElementById("username").value = state.email;
     document.getElementById("phone-code").value = state.phoneCode;
     document.getElementById("phone").value = state.phone;
     document.getElementById("password").value = state.password;
@@ -235,6 +239,15 @@ function render() {
 
   if (state.stage === "kyc") {
     prepareSumsub();
+  }
+
+  if (state.stage === "twofa") {
+    fillAll("[data-twofa-method]", state.authMethod === "sso" ? "Ollylife secure SSO" : "Direct VCCHUB login");
+    const code = document.getElementById("twofa-code");
+    if (code) {
+      code.value = state.twoFactorCode;
+      setTimeout(function () { code.focus(); }, 0);
+    }
   }
 
   if (state.stage === "wallet") {
@@ -589,7 +602,7 @@ async function checkSumsubStatus() {
 }
 
 function collectRegistration() {
-  state.username = document.getElementById("username").value.trim();
+  state.username = state.email;
   state.phoneCode = document.getElementById("phone-code").value;
   state.phone = document.getElementById("phone").value.trim();
   state.password = document.getElementById("password").value;
@@ -599,7 +612,7 @@ function collectRegistration() {
 
 function validateRegistration() {
   const errors = {};
-  if (state.username.length < 3) errors.username = "Enter a username with at least 3 characters.";
+  if (state.username !== state.email || !state.username.includes("@")) errors.username = "Username must match the confirmed email address.";
   if (state.phone.replace(/\D/g, "").length < 7) errors.phone = "Enter a valid phone number.";
   if (passwordStrength(state.password) < 3) errors.password = "Use 8+ characters with upper and lowercase letters and a number.";
   if (state.confirmPassword !== state.password) errors.confirmPassword = "Passwords do not match.";
@@ -612,6 +625,11 @@ document.addEventListener("input", function (event) {
   if (event.target.id === "password") {
     state.password = event.target.value;
     updatePasswordMeter();
+  } else if (event.target.id === "twofa-code") {
+    event.target.value = event.target.value.replace(/\D/g, "").slice(0, 6);
+    state.twoFactorCode = event.target.value;
+    const error = document.getElementById("twofa-error");
+    if (error) error.textContent = "";
   }
 });
 
@@ -631,9 +649,35 @@ document.addEventListener("submit", async function (event) {
   }
   if (event.target.id === "login-form") {
     event.preventDefault();
-    state.stage = "wallet";
+    const loginUsername = document.getElementById("login-email").value.trim();
+    const loginPassword = document.getElementById("login-password").value;
+    if (loginUsername.toLowerCase() !== state.username.toLowerCase()) {
+      showToast("Login failed", "Use the email address registered as your VCCHUB username.");
+      return;
+    }
+    if (state.password && loginPassword !== state.password) {
+      showToast("Login failed", "The password does not match the registered VCCHUB account.");
+      return;
+    }
+    state.authMethod = "password";
+    state.twoFactorCode = "";
+    state.stage = "twofa";
     render();
-    showToast("Signed in", "Welcome to your VCCHUB wallet.");
+    showToast("Password accepted", "Complete two-factor verification to continue.");
+  }
+  if (event.target.id === "twofa-form") {
+    event.preventDefault();
+    const code = document.getElementById("twofa-code").value.replace(/\D/g, "");
+    state.twoFactorCode = code;
+    if (code !== "123456") {
+      document.getElementById("twofa-error").textContent = "Enter the demo verification code 123456.";
+      document.getElementById("twofa-code").focus();
+      return;
+    }
+    state.stage = "wallet";
+    state.walletView = "overview";
+    render();
+    showToast("2FA verified", "Welcome to your secure VCCHUB wallet.");
   }
   if (event.target.id === "card-form") {
     event.preventDefault();
@@ -742,6 +786,7 @@ document.addEventListener("click", async function (event) {
       return;
     }
     state.email = value;
+    state.username = value;
     state.modalOpen = false;
     state.stage = "sending";
     render();
@@ -764,10 +809,23 @@ document.addEventListener("click", async function (event) {
     state.stage = "login";
     render();
   } else if (action === "open-sso") {
-    state.stage = "wallet";
-    state.walletView = "overview";
+    state.authMethod = "sso";
+    state.twoFactorCode = "";
+    state.stage = "twofa";
     render();
-    showToast("SSO successful", "Ollylife securely signed you in without a password.");
+    showToast("SSO connection verified", "Complete two-factor verification to open the wallet.");
+  } else if (action === "resend-2fa") {
+    state.twoFactorCode = "";
+    const codeInput = document.getElementById("twofa-code");
+    if (codeInput) {
+      codeInput.value = "";
+      codeInput.focus();
+    }
+    showToast("Mock code refreshed", "Use 123456 to complete this demo verification.");
+  } else if (action === "back-twofa") {
+    state.twoFactorCode = "";
+    state.stage = state.authMethod === "password" ? "login" : "returning";
+    render();
   } else if (action === "open-topup") {
     state.topupOpen = true;
     render();
