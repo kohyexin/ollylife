@@ -274,6 +274,7 @@ a { color: inherit; }
 .vcc-header .brand-word { font-size: 18px; }
 .vcc-main { width: min(1140px, 100%); margin: auto; padding: 36px 24px 70px; }
 .registration-layout { display: grid; gap: 45px; align-items: start; grid-template-columns: minmax(0, 1fr) 310px; }
+.verification-layout { gap: 32px; }
 .registration-card { max-width: 650px; margin: auto; padding: 32px 38px; border: 1px solid #e0e4eb; border-radius: 18px; background: #fff; box-shadow: 0 15px 45px rgba(36,43,57,.06); }
 .form-title { margin: 0; font-family: 'Manrope', sans-serif; font-size: 22px; letter-spacing: -.03em; }
 .form-subtitle { margin: 7px 0 27px; color: #77808a; font-size: 12px; line-height: 1.55; }
@@ -550,6 +551,7 @@ a { color: inherit; }
   .sidebar { display: none; }
   .dashboard { padding: 32px 24px 50px; }
   .registration-layout { grid-template-columns: 1fr; }
+  .verification-layout .journey-card { order: -1; }
   .journey-card { position: static; max-width: 650px; width: 100%; margin: auto; }
   .journey-steps { display: grid; grid-template-columns: repeat(4, 1fr); }
   .journey-step { min-height: auto; padding: 35px 4px 0; text-align: center; }

@@ -261,20 +261,12 @@
         <header class="vcc-header">
           <div class="brand vcc-brand"><span class="brand-mark">V</span><span class="brand-word">vcc<em>hub</em></span></div>
         </header>
-        <div class="kyc-wrap">
+        <div class="vcc-main">
           <div class="kyc-banner">
             <span><strong>Live Sumsub integration</strong> · Verification runs in Sumsub Sandbox using WebSDK 2.0.</span>
             <span id="sumsub-mode">Checking configuration…</span>
           </div>
-          <div class="kyc-layout">
-            <aside class="kyc-aside">
-              <h2>Identity verification</h2>
-              <p>Real sandbox session for this demo applicant.</p>
-              <div class="kyc-step active" data-live-step="0"><span>1</span>Prepare</div>
-              <div class="kyc-step" data-live-step="1"><span>2</span>Secure token</div>
-              <div class="kyc-step" data-live-step="2"><span>3</span>Sumsub checks</div>
-              <div class="kyc-step" data-live-step="3"><span>4</span>Final result</div>
-            </aside>
+          <div class="registration-layout verification-layout">
             <section class="kyc-card kyc-live-card">
               <div id="sumsub-setup">
                 <div class="sumsub-mark">sumsub</div>
@@ -296,6 +288,16 @@
                 <div id="sumsub-websdk-container"></div>
               </div>
             </section>
+            <aside class="journey-card">
+              <h3>Your activation journey</h3>
+              <p>Your account is created. Complete identity verification to activate the wallet.</p>
+              <div class="journey-steps">
+                <div class="journey-step done"><span class="journey-number">✓</span><strong>Create account</strong><span>VCCHUB login created</span></div>
+                <div class="journey-step done"><span class="journey-number">✓</span><strong>Accept terms</strong><span>Policies accepted</span></div>
+                <div class="journey-step active"><span class="journey-number">3</span><strong>Verify identity</strong><span>In progress with Sumsub</span></div>
+                <div class="journey-step"><span class="journey-number">4</span><strong>Wallet ready</strong><span>Linked to Ollylife</span></div>
+              </div>
+            </aside>
           </div>
         </div>
       </main>
