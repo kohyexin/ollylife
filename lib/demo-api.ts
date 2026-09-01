@@ -29,6 +29,7 @@ export function createCardholder(payload: JsonRecord) {
       firstName: text(payload, 'firstName'),
       lastName: text(payload, 'lastName'),
       dob: text(payload, 'dob'),
+      country: text(payload, 'country'),
       email: text(payload, 'email'),
       phone: text(payload, 'phone'),
       status: 'ACTIVE',

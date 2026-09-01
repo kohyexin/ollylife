@@ -278,26 +278,14 @@
             <section class="kyc-card kyc-live-card">
               <div id="sumsub-setup">
                 <div class="sumsub-mark">sumsub</div>
-                <h1>Verify your identity</h1>
-                <p class="kyc-lead">Choose the issuing country for your document, then continue in Sumsub’s secure sandbox. Sumsub will handle document capture, liveness and the verification result.</p>
-                <div class="country-grid">
-                  <button class="choice-card selected" data-country="SGP">
-                    <span class="country-flag">🇸🇬</span>
-                    <span><strong>Singapore</strong><span>Singapore-issued identity document</span></span>
-                    <span class="choice-radio" aria-hidden="true"></span>
-                  </button>
-                  <button class="choice-card" data-country="CHN">
-                    <span class="country-flag">🇨🇳</span>
-                    <span><strong>Mainland China</strong><span>China-issued identity document</span></span>
-                    <span class="choice-radio" aria-hidden="true"></span>
-                  </button>
-                </div>
+                <h1>Opening secure verification…</h1>
+                <p class="kyc-lead">Sumsub will guide you through identity verification and handle the document country, document capture, liveness and verification result.</p>
                 <div class="integration-status" id="sumsub-config-status">
                   <span class="status-dot waiting"></span>
-                  <span><strong>Checking server configuration</strong><small>Sandbox credentials remain on the local server.</small></span>
+                  <span><strong>Connecting to Sumsub</strong><small>Preparing your secure verification session automatically.</small></span>
                 </div>
                 <div class="integration-error" id="sumsub-error" hidden></div>
-                <div class="kyc-actions"><button class="btn btn-violet" id="start-sumsub" data-action="start-sumsub" disabled>Start Sumsub Sandbox verification →</button></div>
+                <div class="kyc-actions"><button class="btn btn-violet" id="retry-sumsub" data-action="start-sumsub" hidden>Retry secure verification →</button></div>
               </div>
               <div id="sumsub-session" hidden>
                 <div class="sdk-session-head">

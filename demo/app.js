@@ -14,8 +14,7 @@ function initialState() {
     terms: false,
     errors: {},
     kycStep: 0,
-    country: "SGP",
-    documentType: "NATIONAL_ID",
+    verifiedCountry: "",
     applicantId: "",
     externalUserId: "ollylife-demo-" + crypto.randomUUID(),
     firstName: "",
@@ -35,6 +34,7 @@ function initialState() {
     twoFactorCode: "",
     completingKyc: false,
     sumsubConfigured: false,
+    sumsubLaunching: false,
     sumsubStarted: false,
     timer: null,
   };
@@ -394,12 +394,6 @@ function updatePasswordMeter() {
   meter.className = "password-meter strength-" + passwordStrength(state.password);
 }
 
-function renderCountrySelection() {
-  document.querySelectorAll("[data-country]").forEach(function (card) {
-    card.classList.toggle("selected", card.dataset.country === state.country);
-  });
-}
-
 function setLiveStep(activeIndex) {
   document.querySelectorAll("[data-live-step]").forEach(function (element, index) {
     element.classList.toggle("active", index === activeIndex);
@@ -418,9 +412,7 @@ function showSumsubError(message) {
 }
 
 async function prepareSumsub() {
-  renderCountrySelection();
   const status = document.getElementById("sumsub-config-status");
-  const button = document.getElementById("start-sumsub");
   const mode = document.getElementById("sumsub-mode");
   try {
     const response = await fetch("/api/config", { cache: "no-store" });
@@ -434,12 +426,14 @@ async function prepareSumsub() {
         : "Sumsub Sandbox credentials required";
       status.querySelector("small").textContent = config.configured
         ? "Verification level: " + config.levelName
-        : "Add the three values to demo/.env.local, then restart the demo server.";
+        : "Add the Sumsub values to the secure server environment.";
     }
-    if (button) button.disabled = !config.configured;
+    if (config.configured && !state.sumsubStarted && !state.sumsubLaunching) {
+      await launchSumsub();
+    }
   } catch (error) {
     if (mode) mode.textContent = "Server unavailable";
-    showSumsubError("Start the demo with server.py so the secure Sumsub token endpoint is available.");
+    showSumsubError("Unable to reach the secure Sumsub configuration endpoint. Reload and try again.");
   }
 }
 
@@ -501,12 +495,14 @@ async function completeVerifiedApplicant() {
     state.firstName = applicant.firstName;
     state.lastName = applicant.lastName;
     state.dob = applicant.dob;
+    state.verifiedCountry = applicant.country || "";
     const account = await postJson("/api/vcchub/cardholders", {
       externalUserId: state.externalUserId,
       applicantId: state.applicantId,
       firstName: state.firstName,
       lastName: state.lastName,
       dob: state.dob,
+      country: state.verifiedCountry,
       email: state.email,
       phone: state.phoneCode + state.phone.replace(/\s/g, ""),
       source: applicant.source,
@@ -525,17 +521,24 @@ async function completeVerifiedApplicant() {
 }
 
 async function launchSumsub() {
+  if (state.sumsubStarted || state.sumsubLaunching) return;
   if (!state.sumsubConfigured) {
     showSumsubError("Configure the Sumsub Sandbox credentials first.");
     return;
   }
-  if (!window.snsWebSdk) {
+  state.sumsubLaunching = true;
+  const setupError = document.getElementById("sumsub-error");
+  if (setupError) setupError.hidden = true;
+  const retryButton = document.getElementById("retry-sumsub");
+  if (retryButton) retryButton.hidden = true;
+  const sdkBuilder = await waitForSumsubSdk();
+  if (!sdkBuilder) {
+    state.sumsubLaunching = false;
     showSumsubError("The Sumsub WebSDK could not be loaded. Check the network connection and reload.");
+    const retry = document.getElementById("retry-sumsub");
+    if (retry) retry.hidden = false;
     return;
   }
-  const button = document.getElementById("start-sumsub");
-  button.disabled = true;
-  button.textContent = "Creating secure session…";
   setLiveStep(1);
   try {
     const access = await requestSumsubToken();
@@ -543,20 +546,19 @@ async function launchSumsub() {
     document.getElementById("sumsub-session").hidden = false;
     state.sumsubStarted = true;
     setLiveStep(2);
-    const sdk = window.snsWebSdk
+    const sdk = sdkBuilder
       .init(access.token, function () {
         return requestSumsubToken().then(function (next) {
           return next.token;
         });
       })
       .withConf({
-        lang: state.country === "CHN" ? "zh" : "en",
-        country: state.country,
+        lang: navigator.language || "en",
         theme: "light",
       })
       .withOptions({ addViewportTag: false, adaptIframeHeight: true })
       .on("idCheck.onReady", function () {
-        setSdkEvent("Sumsub Sandbox is ready.");
+        setSdkEvent("Sumsub Sandbox is ready. Sumsub will collect and verify the document’s issuing country during verification.");
       })
       .on("idCheck.onApplicantLoaded", function (payload) {
         state.applicantId = payload && payload.applicantId ? payload.applicantId : "";
@@ -574,12 +576,22 @@ async function launchSumsub() {
       })
       .build();
     sdk.launch("#sumsub-websdk-container");
+    state.sumsubLaunching = false;
   } catch (error) {
+    state.sumsubLaunching = false;
     setLiveStep(0);
-    button.disabled = false;
-    button.textContent = "Start Sumsub Sandbox verification →";
+    const retry = document.getElementById("retry-sumsub");
+    if (retry) retry.hidden = false;
     showSumsubError(error.message);
   }
+}
+
+async function waitForSumsubSdk() {
+  const timeoutAt = Date.now() + 10000;
+  while (!window.snsWebSdk && Date.now() < timeoutAt) {
+    await new Promise(function (resolve) { setTimeout(resolve, 100); });
+  }
+  return window.snsWebSdk;
 }
 
 async function checkSumsubStatus() {
@@ -736,7 +748,7 @@ document.addEventListener("submit", async function (event) {
 });
 
 document.addEventListener("click", async function (event) {
-  const target = event.target.closest("[data-action], [data-jump], [data-country], [data-document]");
+  const target = event.target.closest("[data-action], [data-jump]");
   if (!target) return;
 
   if (target.dataset.jump) {
@@ -748,13 +760,6 @@ document.addEventListener("click", async function (event) {
     render();
     return;
   }
-  if (target.dataset.country) {
-    state.country = target.dataset.country;
-    state.documentType = "NATIONAL_ID";
-    renderCountrySelection();
-    return;
-  }
-
   const action = target.dataset.action;
   if (action === "add-recipient") {
     openRecipientEditor("new");
