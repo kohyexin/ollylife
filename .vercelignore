@@ -11,3 +11,7 @@ demo/sumsub.env.example
 vite.config.ts
 .wrangler/
 dist/
+assets/
+deliverables/
+qa/
+tools/

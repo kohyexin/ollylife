@@ -23,6 +23,7 @@ function initialState() {
     cardholderId: "",
     walletBalance: 0,
     commissionBalance: 3250,
+    cardLimit: 2,
     cards: [],
     transactions: [],
     deliveryRecipient: null,
@@ -30,6 +31,7 @@ function initialState() {
     apiTrace: [],
     topupOpen: false,
     cardTopupOpen: false,
+    cardCancelOpen: false,
     cardActionMenuOpen: false,
     walletView: "overview",
     authMethod: "sso",
@@ -58,7 +60,7 @@ const stageRank = {
 };
 
 const journey = [
-  ["1. Ollylife", "portal"],
+  ["1. OlyLife", "portal"],
   ["2. Invite", "inbox"],
   ["3. Register", "registration"],
   ["4. Verify", "kyc"],
@@ -157,6 +159,7 @@ function syncAccountPayload(payload) {
   if (typeof payload.commissionBalance === "number") state.commissionBalance = payload.commissionBalance;
   if (Array.isArray(payload.cards)) state.cards = payload.cards;
   if (Array.isArray(payload.transactions)) state.transactions = payload.transactions;
+  if (typeof payload.cardLimit === "number") state.cardLimit = payload.cardLimit;
   if (payload.cardholder) {
     state.cardholderId = payload.cardholder.id || state.cardholderId;
     state.firstName = payload.cardholder.firstName || state.firstName;
@@ -178,6 +181,11 @@ function fillDynamicAccountData() {
   fillAll("[data-card-last4]", firstCard ? firstCard.last4 : "—");
   fillAll("[data-card-type]", firstCard ? (firstCard.type === "PHYSICAL" ? "Physical" : "Virtual") : "—");
   fillAll("[data-selected-card-balance]", formatMoney(firstCard ? Number(firstCard.balance || 0) : 0));
+  document.querySelectorAll("[data-card-status]").forEach(function (element) {
+    const isCancelled = firstCard && firstCard.status === "CANCELLED";
+    element.className = isCancelled ? "event-cancelled" : "event-ok";
+    element.textContent = isCancelled ? "● Cancelled" : "● Active";
+  });
   document.querySelectorAll("[data-first-name-value]").forEach(function (input) { input.value = state.firstName; });
   document.querySelectorAll("[data-last-name-value]").forEach(function (input) { input.value = state.lastName; });
   document.querySelectorAll("[data-dob-value]").forEach(function (input) { input.value = state.dob; });
@@ -245,7 +253,7 @@ function render() {
   }
 
   if (state.stage === "twofa") {
-    fillAll("[data-twofa-method]", state.authMethod === "sso" ? "Ollylife secure SSO" : "Direct VCCHUB login");
+    fillAll("[data-twofa-method]", state.authMethod === "sso" ? "OlyLife secure SSO" : "Direct VCCHUB login");
     const code = document.getElementById("twofa-code");
     if (code) {
       code.value = state.twoFactorCode;
@@ -263,6 +271,14 @@ function render() {
       app.appendChild(document.getElementById("card-topup-drawer-template").content.cloneNode(true));
       fillDynamicAccountData();
     }
+    if (state.cardCancelOpen) {
+      app.appendChild(document.getElementById("card-cancel-modal-template").content.cloneNode(true));
+      fillDynamicAccountData();
+      setTimeout(function () {
+        const firstDigit = document.querySelector("[data-cancel-2fa]");
+        if (firstDigit) firstDigit.focus();
+      }, 0);
+    }
   }
 
   window.scrollTo({ top: 0, behavior: "smooth" });
@@ -274,22 +290,26 @@ function renderWallet() {
   if (!overview || !cardForm) return;
   overview.hidden = state.walletView !== "overview";
   cardForm.hidden = state.walletView !== "card-form";
+  const activeCardCount = state.cards.filter(function (card) { return card.status !== "CANCELLED"; }).length;
+  const availableCardSlots = Math.max(0, state.cardLimit - activeCardCount);
   const addButton = document.getElementById("add-card-button");
   if (addButton) {
-    addButton.disabled = state.walletBalance <= 0 || state.cards.length > 0;
-    addButton.textContent = state.cards.length ? "✓ Card created" : "＋ Add Card";
+    addButton.disabled = state.walletBalance <= 0 || availableCardSlots === 0;
+    addButton.textContent = availableCardSlots === 0 ? "Card limit reached" : "＋ Add Card";
   }
   const rule = document.getElementById("card-rule");
   if (rule) {
     rule.classList.toggle("ready", state.walletBalance > 0);
     const totalCardBalance = state.cards.reduce(function (total, card) { return total + Number(card.balance || 0); }, 0);
     rule.textContent = state.cards.length
-      ? totalCardBalance > 0
-        ? "Card funded successfully. Use the card action menu to add more funds from the wallet."
-        : "Card created successfully. Use the card action menu to assign wallet funds to the card."
+      ? state.cards[0].status === "CANCELLED"
+        ? "Card cancelled. Its remaining balance was returned to the VCCHUB wallet and that card type is available again."
+        : totalCardBalance > 0
+          ? "Card funded successfully. Use the card action menu to add more funds from the wallet."
+          : "Card created successfully. Use the card action menu to assign wallet funds to the card."
       : state.walletBalance > 0
         ? "Wallet funded. Card creation is now available."
-        : "Top up the wallet from your Ollylife commission before creating a card.";
+        : "Top up the wallet from your OlyLife commission before creating a card.";
   }
   const empty = document.querySelector("[data-empty-cards]");
   const row = document.querySelector("[data-card-row]");
@@ -297,6 +317,13 @@ function renderWallet() {
   if (row) row.hidden = state.cards.length === 0;
   const cardMenu = document.querySelector("[data-card-action-menu]");
   if (cardMenu) cardMenu.hidden = !state.cardActionMenuOpen;
+  const firstCard = state.cards[0];
+  const cardCancelled = Boolean(firstCard && firstCard.status === "CANCELLED");
+  document.querySelectorAll("[data-active-card-action]").forEach(function (button) {
+    button.hidden = cardCancelled;
+  });
+  const cancelledLabel = document.querySelector("[data-cancelled-card-label]");
+  if (cancelledLabel) cancelledLabel.hidden = !cardCancelled;
   const trace = document.querySelector("[data-api-trace]");
   if (trace && state.apiTrace.length) {
     trace.hidden = false;
@@ -659,6 +686,15 @@ document.addEventListener("input", function (event) {
     if (total) total.textContent = formatMoney(Math.max(0, Number(event.target.value) || 0));
     const error = document.getElementById("card-topup-error");
     if (error) error.textContent = "";
+  } else if (event.target.matches("[data-cancel-2fa]")) {
+    event.target.value = event.target.value.replace(/\D/g, "").slice(0, 1);
+    const error = document.getElementById("card-cancel-error");
+    if (error) error.textContent = "";
+    if (event.target.value) {
+      const inputs = Array.from(document.querySelectorAll("[data-cancel-2fa]"));
+      const next = inputs[inputs.indexOf(event.target) + 1];
+      if (next) next.focus();
+    }
   }
 });
 
@@ -733,6 +769,8 @@ document.addEventListener("submit", async function (event) {
         cardholderId: state.cardholderId,
         walletBalance: state.walletBalance,
         commissionBalance: state.commissionBalance,
+        cards: state.cards,
+        cardLimit: state.cardLimit,
         cardholder: {
           firstName: state.firstName,
           lastName: state.lastName,
@@ -865,7 +903,7 @@ document.addEventListener("click", async function (event) {
       return;
     }
     target.disabled = true;
-    target.textContent = "Checking Ollylife balance…";
+    target.textContent = "Checking OlyLife balance…";
     try {
       const result = await postJson("/api/ollylife/topups", {
         externalUserId: state.externalUserId,
@@ -873,6 +911,7 @@ document.addEventListener("click", async function (event) {
         commissionBalance: state.commissionBalance,
         walletBalance: state.walletBalance,
         cards: state.cards,
+        cardLimit: state.cardLimit,
         cardholder: state.cardholderId ? {
           id: state.cardholderId,
           firstName: state.firstName,
@@ -886,7 +925,7 @@ document.addEventListener("click", async function (event) {
       state.apiTrace = result.apiTrace || [];
       state.topupOpen = false;
       render();
-      showToast("Wallet topped up", formatMoney(amount) + " was moved from Ollylife commission to VCCHUB.");
+      showToast("Wallet topped up", formatMoney(amount) + " was moved from OlyLife commission to VCCHUB.");
     } catch (requestError) {
       target.disabled = false;
       target.textContent = "Check balance & top up →";
@@ -905,10 +944,71 @@ document.addEventListener("click", async function (event) {
     showToast("Card transactions", state.transactions.length ? String(state.transactions.length) + " wallet and card transaction(s) recorded." : "No card transactions yet.");
   } else if (action === "open-card-topup") {
     if (!state.cards.length) return;
+    if (state.cards[0].status !== "ACTIVE") {
+      showToast("Card unavailable", "A cancelled card cannot be topped up.");
+      return;
+    }
     state.cardActionMenuOpen = false;
     state.topupOpen = false;
     state.cardTopupOpen = true;
     render();
+  } else if (action === "open-card-cancel") {
+    if (!state.cards.length || state.cards[0].status !== "ACTIVE") return;
+    state.cardActionMenuOpen = false;
+    state.topupOpen = false;
+    state.cardTopupOpen = false;
+    state.cardCancelOpen = true;
+    render();
+  } else if (action === "close-card-cancel") {
+    state.cardCancelOpen = false;
+    render();
+  } else if (action === "card-cancel-backdrop" && event.target === target) {
+    state.cardCancelOpen = false;
+    render();
+  } else if (action === "confirm-card-cancel") {
+    const code = Array.from(document.querySelectorAll("[data-cancel-2fa]"))
+      .map(function (input) { return input.value; })
+      .join("");
+    const error = document.getElementById("card-cancel-error");
+    if (code !== "123456") {
+      error.textContent = code.length < 6 ? "Enter all six digits." : "The 2FA code is incorrect. Please try again.";
+      const firstDigit = document.querySelector("[data-cancel-2fa]");
+      if (firstDigit) firstDigit.focus();
+      return;
+    }
+    target.disabled = true;
+    target.textContent = "Cancelling card…";
+    try {
+      const card = state.cards[0];
+      const refundedAmount = Number(card.balance || 0);
+      const result = await postJson("/api/vcchub/cards/cancel", {
+        externalUserId: state.externalUserId,
+        cardId: card.id,
+        twoFactorCode: code,
+        walletBalance: state.walletBalance,
+        commissionBalance: state.commissionBalance,
+        cards: state.cards,
+        transactions: state.transactions,
+        cardholder: {
+          id: state.cardholderId,
+          firstName: state.firstName,
+          lastName: state.lastName,
+          dob: state.dob,
+          email: state.email,
+          phone: state.phoneCode + state.phone.replace(/\s/g, ""),
+        },
+      });
+      syncAccountPayload(result);
+      state.apiTrace = result.apiTrace || [];
+      state.cardCancelOpen = false;
+      state.cardActionMenuOpen = false;
+      render();
+      showToast("Card cancelled", formatMoney(refundedAmount) + " was returned to the VCCHUB wallet. You can now create another card of the same type.");
+    } catch (requestError) {
+      target.disabled = false;
+      target.textContent = "Confirm cancellation";
+      error.textContent = requestError.message;
+    }
   } else if (action === "close-card-topup") {
     state.cardTopupOpen = false;
     render();
@@ -973,9 +1073,9 @@ document.addEventListener("click", async function (event) {
     if (!state.cardholderId) {
       showToast("Cardholder required", "Complete the live Sumsub verification before creating a card.");
     } else if (state.walletBalance <= 0) {
-      showToast("Top up required", "Add funds from the Ollylife commission balance first.");
-    } else if (state.cards.length) {
-      showToast("Card already created", "This demo wallet already has an active card.");
+      showToast("Top up required", "Add funds from the OlyLife commission balance first.");
+    } else if (state.cards.filter(function (card) { return card.status !== "CANCELLED"; }).length >= state.cardLimit) {
+      showToast("Card limit reached", "Cancel an active card to release a slot before creating another card.");
     } else {
       state.walletView = "card-form";
       render();
@@ -1005,10 +1105,16 @@ document.addEventListener("change", function (event) {
 });
 
 document.addEventListener("keydown", function (event) {
-  if (event.key === "Escape" && (state.modalOpen || state.topupOpen || state.cardTopupOpen)) {
+  if (event.key === "Backspace" && event.target.matches("[data-cancel-2fa]") && !event.target.value) {
+    const inputs = Array.from(document.querySelectorAll("[data-cancel-2fa]"));
+    const previous = inputs[inputs.indexOf(event.target) - 1];
+    if (previous) previous.focus();
+  }
+  if (event.key === "Escape" && (state.modalOpen || state.topupOpen || state.cardTopupOpen || state.cardCancelOpen)) {
     state.modalOpen = false;
     state.topupOpen = false;
     state.cardTopupOpen = false;
+    state.cardCancelOpen = false;
     state.cardActionMenuOpen = false;
     render();
   }

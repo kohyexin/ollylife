@@ -37,6 +37,10 @@ next-env.d.ts
 /.wrangler/
 /outputs/
 /work/
+/qa/
+tsconfig.tsbuildinfo
+**/__pycache__/
+*.pyc
 
 # legacy local demo runtime
 demo/__pycache__/

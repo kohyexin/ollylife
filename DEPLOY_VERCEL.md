@@ -1,4 +1,4 @@
-# Publish the Ollylife demo with GitHub and Vercel
+# Publish the OlyLife demo with GitHub and Vercel
 
 The repository root is now a standard Next.js App Router project. The browser UI is rendered by Next.js and all server-side Sumsub and demo API endpoints live under `app/api`.
 
@@ -13,7 +13,7 @@ Create an empty GitHub repository, then run these commands from this project fol
 ```powershell
 git init
 git add .
-git commit -m "Convert Ollylife demo to Next.js"
+git commit -m "Convert OlyLife demo to Next.js"
 git branch -M main
 git remote add origin https://github.com/YOUR-ACCOUNT/YOUR-REPOSITORY.git
 git push -u origin main

@@ -9,7 +9,7 @@ function getDemoMarkup() {
   const body = html.match(/<body[^>]*>([\s\S]*?)<\/body>/i)?.[1];
 
   if (!body) {
-    throw new Error('The Ollylife demo template could not be loaded.');
+    throw new Error('The OlyLife demo template could not be loaded.');
   }
 
   return body.replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, '');
