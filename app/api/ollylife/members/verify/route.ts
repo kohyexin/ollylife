@@ -5,8 +5,7 @@ export const dynamic = 'force-dynamic';
 const demoMembers = new Map([
   ['olivia.chen@ollylife.com', {
     id: 'OL-208418',
-    firstName: 'Olivia',
-    lastName: 'Chen',
+    fullName: 'Olivia Chen',
     email: 'olivia.chen@ollylife.com',
     phoneCode: '+65',
     phone: '8123 4567',
@@ -14,8 +13,7 @@ const demoMembers = new Map([
   }],
   ['robinkoh.work@gmail.com', {
     id: 'OL-208419',
-    firstName: 'Robin',
-    lastName: 'Koh',
+    fullName: 'Robin Koh Ye Xin',
     email: 'robinkoh.work@gmail.com',
     phoneCode: '+65',
     phone: '8123 4567',

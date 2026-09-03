@@ -90,6 +90,9 @@ export function createCard(payload: JsonRecord) {
   const activeCards = existingCards.filter((card) => text(card, 'status').toUpperCase() !== 'CANCELLED');
   const slotsUsed = activeCards.length;
   const cardType = text(payload, 'cardType').toUpperCase() || 'VIRTUAL';
+  const cardCreationFee = payload.applyConfiguredWalletFee === true ? 10 : 0;
+  const minimumInitialCardBalance = payload.enforceMinimumInitialCardBalance === true ? 20 : 0;
+  const initialCardBalance = number(payload, 'initialCardBalance');
   if (walletBalance <= 0) {
     return { conflict: true, error: 'Top up the wallet before creating a card.' };
   }
@@ -102,6 +105,19 @@ export function createCard(payload: JsonRecord) {
   }
   if (slotsUsed >= cardLimit) {
     return { conflict: true, error: `The card limit of ${cardLimit} active cards has been reached.` };
+  }
+  if (initialCardBalance < minimumInitialCardBalance) {
+    return {
+      conflict: true,
+      error: `The initial card balance must be at least SGD ${minimumInitialCardBalance.toFixed(2)}.`,
+    };
+  }
+  const totalWalletDeduction = cardCreationFee + initialCardBalance;
+  if (walletBalance < totalWalletDeduction) {
+    return {
+      conflict: true,
+      error: `Insufficient Wallet balance. Card creation requires SGD ${cardCreationFee.toFixed(2)} fee plus SGD ${initialCardBalance.toFixed(2)} initial card funding.`,
+    };
   }
 
   const cardholder = (payload.cardholder ?? {}) as JsonRecord;
@@ -150,22 +166,60 @@ export function createCard(payload: JsonRecord) {
     schemeNetwork: 'Visa',
     currency: 'SGD',
     status: 'ACTIVE',
-    balance: 0,
+    balance: initialCardBalance,
     billingAddress,
     deliveryAddress,
     deliveryRecipient,
     fulfillmentStatus: cardType === 'PHYSICAL' ? 'PROCESSING' : 'ISSUED',
+    creationFee: cardCreationFee,
+    creationFeeCurrency: 'SGD',
+    creationFeeSource: cardCreationFee > 0 ? 'OLYLIFE_CONFIGURATION' : null,
+    initialFundingAmount: initialCardBalance,
+    minimumInitialBalanceApplied: minimumInitialCardBalance,
   };
+
+  const feeTransaction = cardCreationFee > 0
+    ? {
+        id: `fee_${randomUUID().replaceAll('-', '').slice(0, 10)}`,
+        type: 'Card creation fee',
+        cardId: card.id,
+        amount: cardCreationFee,
+        currency: 'SGD',
+        direction: 'DEBIT',
+        balanceSource: 'WALLET',
+        configuredBy: 'OLYLIFE',
+        status: 'COMPLETED',
+      }
+    : null;
+
+  const fundingTransaction = initialCardBalance > 0
+    ? {
+        id: `ctx_${randomUUID().replaceAll('-', '').slice(0, 10)}`,
+        type: 'Wallet to card initial funding',
+        cardId: card.id,
+        amount: initialCardBalance,
+        currency: 'SGD',
+        direction: 'TRANSFER',
+        balanceSource: 'WALLET',
+        balanceDestination: 'CARD',
+        status: 'COMPLETED',
+      }
+    : null;
+
+  const newTransactions = [fundingTransaction, feeTransaction].filter(Boolean);
 
   return {
     commissionBalance: number(payload, 'commissionBalance'),
-    walletBalance,
+    walletBalance: Math.round((walletBalance - totalWalletDeduction) * 100) / 100,
     cardholder,
     cardLimit,
     availableCardSlots: Math.max(0, cardLimit - slotsUsed - 1),
     cards: [card, ...existingCards],
-    transactions: Array.isArray(payload.transactions) ? payload.transactions : [],
+    transactions: [...newTransactions, ...(Array.isArray(payload.transactions) ? payload.transactions : [])],
     card,
+    fee: feeTransaction,
+    initialFunding: fundingTransaction,
+    totalWalletDeduction,
     api: 'VCCHUB demo · create card',
   };
 }

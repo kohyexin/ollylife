@@ -225,24 +225,41 @@
           <section class="v2-check-card">
             <div class="v2-check-icon">OL</div>
             <span class="v2-kicker">Wallet user registration</span>
-            <h1>Confirm your OlyLife membership</h1>
-            <p>Enter the email address registered with OlyLife. VCCHUB will securely ask OlyLife to confirm that the member exists before registration continues.</p>
+            <h1>Verify your email, then confirm membership</h1>
+            <p>VCCHUB first sends a one-time code to confirm you control the email address. Only after verification will VCCHUB securely ask OlyLife to confirm that the member exists.</p>
             <form id="v2-member-form" novalidate>
               <div class="field">
                 <label for="v2-member-email">OlyLife email address</label>
                 <input class="input" id="v2-member-email" type="email" autocomplete="email" data-email-value placeholder="name@example.com" required />
-                <span class="field-note">For this demo, try olivia.chen@ollylife.com. Use unknown@example.com to preview the not-found response.</span>
+                <span class="field-note">For this demo, try olivia.chen@ollylife.com. VCCHUB will simulate sending an email OTP.</span>
                 <span class="field-error" id="v2-member-error"></span>
               </div>
+              <button class="btn btn-violet btn-wide" type="submit">Send email verification code →</button>
+            </form>
+            <form id="v2-member-otp-form" novalidate hidden>
+              <div class="email-otp-recipient">
+                <span>Verification code sent to</span>
+                <strong data-member-otp-email></strong>
+              </div>
+              <div class="field">
+                <label for="v2-member-otp">Email verification code</label>
+                <input class="twofa-input member-otp-input" id="v2-member-otp" inputmode="numeric" autocomplete="one-time-code" maxlength="6" pattern="[0-9]{6}" placeholder="000000" required />
+                <span class="field-note">Demo code: <strong>123456</strong></span>
+                <span class="field-error" id="v2-member-otp-error"></span>
+              </div>
               <div class="member-api-status" id="v2-member-status" hidden></div>
-              <button class="btn btn-violet btn-wide" type="submit">Confirm membership &amp; continue →</button>
+              <button class="btn btn-violet btn-wide" type="submit">Verify code &amp; check membership →</button>
+              <div class="member-otp-actions">
+                <button type="button" data-action="v2-resend-member-otp">Resend code</button>
+                <button type="button" data-action="v2-change-member-email">Use another email</button>
+              </div>
             </form>
             <div class="v2-support-note"><strong>Can’t verify your email?</strong><span>Re-enter the address used for your OlyLife membership or contact <a href="mailto:support@ollylife.com">OlyLife support</a>.</span></div>
           </section>
           <aside class="v2-api-card">
             <span class="v2-kicker">Secure eligibility check</span>
-            <h2>VCCHUB confirms eligibility before collecting registration details.</h2>
-            <div class="v2-api-flow"><span><b>1</b> Email entered in VCCHUB</span><i>↓</i><span><b>2</b> VCCHUB calls OlyLife</span><i>↓</i><span><b>3</b> Member match returned</span></div>
+            <h2>VCCHUB confirms email ownership before checking eligibility.</h2>
+            <div class="v2-api-flow"><span><b>1</b> Email entered in VCCHUB</span><i>↓</i><span><b>2</b> VCCHUB sends and verifies OTP</span><i>↓</i><span><b>3</b> VCCHUB calls OlyLife</span><i>↓</i><span><b>4</b> Member match returned</span></div>
             <p>No wallet account is created until the user completes registration and identity verification.</p>
           </aside>
         </div>
@@ -268,8 +285,7 @@
                 <h2 class="section-title">OlyLife member information</h2>
                 <div class="form-grid two registration-member-grid">
                   <label>Member ID<input class="input" data-member-id-value readonly /></label>
-                  <label>First Name<input class="input" data-member-first-name-value readonly /></label>
-                  <label>Last Name<input class="input" data-member-last-name-value readonly /></label>
+                  <label class="full">Full Name<input class="input" data-member-full-name-value readonly /></label>
                 </div>
                 <p class="field-note registration-source-note">Provided by OlyLife after your membership email was verified.</p>
               </div>
@@ -283,11 +299,12 @@
               <div class="field">
                 <label for="phone">Phone number <span class="required">*</span></label>
                 <div class="input-row">
-                  <select class="select" id="phone-code" aria-label="Country code">
+                  <select class="select" id="phone-code-v1" data-v1-phone-code aria-label="Country code">
                     <option value="+65">🇸🇬 +65</option>
                     <option value="+86">🇨🇳 +86</option>
                   </select>
-                  <input class="input" id="phone" inputmode="tel" autocomplete="tel" />
+                  <select class="select" id="phone-code-v2" data-v2-phone-code aria-label="Country calling code" hidden></select>
+                  <input class="input" id="phone" inputmode="tel" autocomplete="tel-national" />
                 </div>
                 <span class="field-error" data-error="phone"></span>
               </div>
@@ -300,7 +317,7 @@
                 <h2 class="section-title">Registered address</h2>
                 <p class="section-intro">Enter the residential address to keep with your VCCHUB wallet and future card applications.</p>
                 <div class="form-grid two registration-address-grid">
-                  <label>Country / Region *<input class="input" id="registration-country" autocomplete="country-name" placeholder="e.g. Singapore" /></label>
+                  <label>Country / Region *<select class="select" id="registration-country" autocomplete="country-name"><option value="">Select country / region</option></select></label>
                   <label>State / Province *<input class="input" id="registration-state" autocomplete="address-level1" placeholder="e.g. Singapore" /></label>
                   <label>City *<input class="input" id="registration-city" autocomplete="address-level2" placeholder="e.g. Singapore" /></label>
                   <label>Postal code *<input class="input" id="registration-postal" autocomplete="postal-code" placeholder="e.g. 018956" /></label>
@@ -581,6 +598,22 @@
                   </div>
                   <p class="card-type-rule">Programme limit: one active virtual card and one active physical card.</p>
                 </section>
+                <section class="configured-fee-section" data-v2-card-fee hidden>
+                  <div class="section-title-row">
+                    <div><h2>Card funding &amp; creation fee</h2><p>Choose the opening card balance. VCCHUB deducts it together with the OlyLife-configured fee when creation succeeds.</p></div>
+                    <span class="physical-badge">MINIMUM SGD 20</span>
+                  </div>
+                  <div class="configured-fee-summary">
+                    <div><span>Wallet balance</span><strong data-fee-wallet-before>SGD 0.00</strong></div>
+                    <span class="configured-fee-operator">−</span>
+                    <div><span>Creation fee</span><strong data-card-creation-fee>SGD 10.00</strong></div>
+                    <span class="configured-fee-operator">−</span>
+                    <label class="configured-funding-input"><span>Initial card balance</span><input id="initial-card-balance" type="number" min="20" step="0.01" value="30.00" required /></label>
+                    <span class="configured-fee-operator">=</span>
+                    <div class="configured-fee-result"><span>Wallet balance after creation</span><strong data-fee-wallet-after>SGD 0.00</strong></div>
+                  </div>
+                  <p class="configured-fee-note" data-card-creation-calculation>The initial card balance must be at least SGD 20.00. Card creation, fee charging and initial funding are processed as one controlled operation.</p>
+                </section>
                 <section>
                   <h2 data-address-section-title>Billing Address</h2>
                   <p class="section-intro" data-address-section-copy hidden></p>
@@ -630,7 +663,7 @@
                   </div>
                   <label class="delivery-confirm"><input type="checkbox" id="confirm-delivery" /><span><strong>Confirm recipient and delivery address</strong><small>I confirm the selected recipient details are complete and correct.</small></span></label>
                 </section>
-                <div class="card-form-actions"><button class="btn btn-outline" type="button" data-action="cancel-card">Cancel</button><button class="btn btn-violet" type="submit">Create card →</button></div>
+                <div class="card-form-actions"><button class="btn btn-outline" type="button" data-action="cancel-card">Cancel</button><button class="btn btn-violet" type="submit">Create card &amp; fund →</button></div>
               </form>
             </div>
           </section>

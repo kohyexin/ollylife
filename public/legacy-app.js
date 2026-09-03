@@ -42,6 +42,10 @@ function initialState(version) {
     completingKyc: false,
     memberVerified: false,
     memberId: "",
+    memberFullName: "",
+    memberOtpSent: false,
+    memberOtpRequestId: "",
+    memberOtpCode: "",
     registeredAddress: {
       country: "",
       state: "",
@@ -60,6 +64,63 @@ function initialState(version) {
 }
 
 let state = initialState("v1");
+
+const countryDirectory = [
+  ["Afghanistan", "+93"], ["Albania", "+355"], ["Algeria", "+213"], ["Andorra", "+376"], ["Angola", "+244"],
+  ["Argentina", "+54"], ["Armenia", "+374"], ["Australia", "+61"], ["Austria", "+43"], ["Azerbaijan", "+994"],
+  ["Bahrain", "+973"], ["Bangladesh", "+880"], ["Belarus", "+375"], ["Belgium", "+32"], ["Belize", "+501"],
+  ["Bhutan", "+975"], ["Bolivia", "+591"], ["Bosnia and Herzegovina", "+387"], ["Botswana", "+267"], ["Brazil", "+55"],
+  ["Brunei", "+673"], ["Bulgaria", "+359"], ["Cambodia", "+855"], ["Cameroon", "+237"], ["Canada", "+1"],
+  ["Chile", "+56"], ["China", "+86"], ["Colombia", "+57"], ["Costa Rica", "+506"], ["Croatia", "+385"],
+  ["Cyprus", "+357"], ["Czech Republic", "+420"], ["Denmark", "+45"], ["Dominican Republic", "+1"], ["Ecuador", "+593"],
+  ["Egypt", "+20"], ["Estonia", "+372"], ["Ethiopia", "+251"], ["Fiji", "+679"], ["Finland", "+358"],
+  ["France", "+33"], ["Georgia", "+995"], ["Germany", "+49"], ["Ghana", "+233"], ["Greece", "+30"],
+  ["Hong Kong", "+852"], ["Hungary", "+36"], ["Iceland", "+354"], ["India", "+91"], ["Indonesia", "+62"],
+  ["Iran", "+98"], ["Iraq", "+964"], ["Ireland", "+353"], ["Israel", "+972"], ["Italy", "+39"],
+  ["Japan", "+81"], ["Jordan", "+962"], ["Kazakhstan", "+7"], ["Kenya", "+254"], ["Kuwait", "+965"],
+  ["Kyrgyzstan", "+996"], ["Laos", "+856"], ["Latvia", "+371"], ["Lebanon", "+961"], ["Lithuania", "+370"],
+  ["Luxembourg", "+352"], ["Macao", "+853"], ["Malaysia", "+60"], ["Maldives", "+960"], ["Malta", "+356"],
+  ["Mauritius", "+230"], ["Mexico", "+52"], ["Moldova", "+373"], ["Monaco", "+377"], ["Mongolia", "+976"],
+  ["Morocco", "+212"], ["Myanmar", "+95"], ["Nepal", "+977"], ["Netherlands", "+31"], ["New Zealand", "+64"],
+  ["Nigeria", "+234"], ["North Macedonia", "+389"], ["Norway", "+47"], ["Oman", "+968"], ["Pakistan", "+92"],
+  ["Panama", "+507"], ["Papua New Guinea", "+675"], ["Paraguay", "+595"], ["Peru", "+51"], ["Philippines", "+63"],
+  ["Poland", "+48"], ["Portugal", "+351"], ["Qatar", "+974"], ["Romania", "+40"], ["Russia", "+7"],
+  ["Saudi Arabia", "+966"], ["Serbia", "+381"], ["Singapore", "+65"], ["Slovakia", "+421"], ["Slovenia", "+386"],
+  ["South Africa", "+27"], ["South Korea", "+82"], ["Spain", "+34"], ["Sri Lanka", "+94"], ["Sweden", "+46"],
+  ["Switzerland", "+41"], ["Taiwan", "+886"], ["Tajikistan", "+992"], ["Thailand", "+66"], ["Türkiye", "+90"],
+  ["Ukraine", "+380"], ["United Arab Emirates", "+971"], ["United Kingdom", "+44"], ["United States", "+1"], ["Uruguay", "+598"],
+  ["Uzbekistan", "+998"], ["Venezuela", "+58"], ["Vietnam", "+84"], ["Zambia", "+260"], ["Zimbabwe", "+263"]
+];
+
+const v2ProgrammeFees = {
+  currency: "SGD",
+  minimumInitialCardBalance: 20,
+  cardCreation: {
+    VIRTUAL: 10,
+    PHYSICAL: 10,
+  },
+};
+
+function populateRegistrationLookups() {
+  const phoneCodes = document.getElementById("phone-code-v2");
+  const countries = document.getElementById("registration-country");
+  if (phoneCodes) {
+    countryDirectory.forEach(function (entry) {
+      const option = document.createElement("option");
+      option.value = entry[1];
+      option.textContent = entry[1] + " · " + entry[0];
+      phoneCodes.appendChild(option);
+    });
+  }
+  if (countries) {
+    countryDirectory.forEach(function (entry) {
+      const option = document.createElement("option");
+      option.value = entry[0];
+      option.textContent = entry[0];
+      countries.appendChild(option);
+    });
+  }
+}
 
 const stageRank = {
   portal: 0,
@@ -261,6 +322,7 @@ function fillDynamicAccountData() {
   document.querySelectorAll("[data-dob-value]").forEach(function (input) { input.value = state.dob; });
   document.querySelectorAll("[data-phone-value]").forEach(function (input) { input.value = state.phoneCode + state.phone.replace(/\s/g, ""); });
   document.querySelectorAll("[data-member-id-value]").forEach(function (input) { input.value = state.memberId; });
+  document.querySelectorAll("[data-member-full-name-value]").forEach(function (input) { input.value = state.memberFullName; });
   document.querySelectorAll("[data-member-first-name-value]").forEach(function (input) { input.value = state.firstName; });
   document.querySelectorAll("[data-member-last-name-value]").forEach(function (input) { input.value = state.lastName; });
 }
@@ -308,9 +370,14 @@ function render() {
   }
 
   if (state.stage === "registration") {
+    populateRegistrationLookups();
     state.username = state.email;
     document.getElementById("username").value = state.email;
-    document.getElementById("phone-code").value = state.phoneCode;
+    const v1PhoneCode = document.getElementById("phone-code-v1");
+    const v2PhoneCode = document.getElementById("phone-code-v2");
+    v1PhoneCode.hidden = state.version === "v2";
+    v2PhoneCode.hidden = state.version !== "v2";
+    (state.version === "v2" ? v2PhoneCode : v1PhoneCode).value = state.phoneCode;
     document.getElementById("phone").value = state.phone;
     document.getElementById("password").value = state.password;
     document.getElementById("confirm-password").value = state.confirmPassword;
@@ -375,8 +442,19 @@ function render() {
   }
 
   if (state.stage === "v2-member-check") {
+    const emailForm = document.getElementById("v2-member-form");
+    const otpForm = document.getElementById("v2-member-otp-form");
     const email = document.getElementById("v2-member-email");
-    if (email) setTimeout(function () { email.focus(); }, 0);
+    const otp = document.getElementById("v2-member-otp");
+    if (emailForm) emailForm.hidden = state.memberOtpSent;
+    if (otpForm) otpForm.hidden = !state.memberOtpSent;
+    fillAll("[data-member-otp-email]", state.email);
+    if (email) email.value = state.email;
+    if (otp) otp.value = state.memberOtpCode;
+    setTimeout(function () {
+      if (state.memberOtpSent && otp) otp.focus();
+      else if (email) email.focus();
+    }, 0);
   }
 
   if (state.stage === "v2-topup") {
@@ -592,6 +670,23 @@ function updateCardTypeForm() {
   if (!selected || !deliverySection) return;
   const isPhysical = selected.value === "PHYSICAL";
   const confirmDelivery = document.getElementById("confirm-delivery");
+  const feeSection = document.querySelector("[data-v2-card-fee]");
+  if (feeSection) feeSection.hidden = state.version !== "v2";
+  if (state.version === "v2" && selected) {
+    const fee = v2ProgrammeFees.cardCreation[selected.value] || 0;
+    const initialBalanceInput = document.getElementById("initial-card-balance");
+    const initialCardBalance = Math.max(0, Number(initialBalanceInput && initialBalanceInput.value) || 0);
+    const requiredWalletBalance = fee + initialCardBalance;
+    fillAll("[data-fee-wallet-before]", formatMoney(state.walletBalance));
+    fillAll("[data-card-creation-fee]", formatMoney(fee));
+    fillAll("[data-fee-wallet-after]", formatMoney(Math.max(0, state.walletBalance - requiredWalletBalance)));
+    const calculation = document.querySelector("[data-card-creation-calculation]");
+    if (calculation) {
+      calculation.textContent = initialCardBalance < v2ProgrammeFees.minimumInitialCardBalance
+        ? "Enter an initial card balance of at least " + formatMoney(v2ProgrammeFees.minimumInitialCardBalance) + "."
+        : "VCCHUB will deduct " + formatMoney(fee) + " fee plus " + formatMoney(initialCardBalance) + " initial funding from Wallet. Total Wallet deduction: " + formatMoney(requiredWalletBalance) + ".";
+    }
+  }
   if (state.version === "v2") {
     deliverySection.hidden = true;
     if (officeSection) officeSection.hidden = !isPhysical;
@@ -907,7 +1002,7 @@ async function checkSumsubStatus() {
 
 function collectRegistration() {
   state.username = state.email;
-  state.phoneCode = document.getElementById("phone-code").value;
+  state.phoneCode = document.getElementById(state.version === "v2" ? "phone-code-v2" : "phone-code-v1").value.trim();
   state.phone = document.getElementById("phone").value.trim();
   if (state.version === "v2") {
     state.registeredAddress = {
@@ -927,7 +1022,7 @@ function collectRegistration() {
 function validateRegistration() {
   const errors = {};
   if (state.username !== state.email || !state.username.includes("@")) errors.username = "Username must match the confirmed email address.";
-  if (state.phone.replace(/\D/g, "").length < 7) errors.phone = "Enter a valid phone number.";
+  if (!/^\+\d{1,4}$/.test(state.phoneCode) || state.phone.replace(/\D/g, "").length < 7) errors.phone = "Choose a valid country code and enter a valid phone number.";
   if (state.version === "v2") {
     const requiredAddress = ["country", "state", "city", "postalCode", "addressLine1"];
     if (requiredAddress.some(function (field) { return !state.registeredAddress[field]; })) {
@@ -950,11 +1045,18 @@ document.addEventListener("input", function (event) {
     state.twoFactorCode = event.target.value;
     const error = document.getElementById("twofa-error");
     if (error) error.textContent = "";
+  } else if (event.target.id === "v2-member-otp") {
+    event.target.value = event.target.value.replace(/\D/g, "").slice(0, 6);
+    state.memberOtpCode = event.target.value;
+    const error = document.getElementById("v2-member-otp-error");
+    if (error) error.textContent = "";
   } else if (event.target.id === "card-topup-amount") {
     const total = document.querySelector("[data-card-topup-total]");
     if (total) total.textContent = formatMoney(Math.max(0, Number(event.target.value) || 0));
     const error = document.getElementById("card-topup-error");
     if (error) error.textContent = "";
+  } else if (event.target.id === "initial-card-balance") {
+    updateCardTypeForm();
   } else if (event.target.matches("[data-cancel-2fa]")) {
     event.target.value = event.target.value.replace(/\D/g, "").slice(0, 1);
     const error = document.getElementById("card-cancel-error");
@@ -972,24 +1074,64 @@ document.addEventListener("submit", async function (event) {
     event.preventDefault();
     const input = document.getElementById("v2-member-email");
     const error = document.getElementById("v2-member-error");
-    const status = document.getElementById("v2-member-status");
     const submit = event.target.querySelector('[type="submit"]');
     const email = input.value.trim();
     error.textContent = "";
-    status.hidden = true;
-    status.className = "member-api-status";
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
       error.textContent = "Enter a valid email address.";
       input.focus();
       return;
     }
     submit.disabled = true;
-    submit.textContent = "Checking with OlyLife…";
+    submit.textContent = "Sending verification code…";
     try {
+      const payload = await postJson("/api/vcchub/email-otp/request", { email: email, purpose: "WALLET_SIGNUP" });
+      state.email = email;
+      state.username = email;
+      state.memberOtpSent = true;
+      state.memberOtpRequestId = payload.requestId;
+      state.memberOtpCode = "";
+      render();
+      showToast("Verification code sent", "Enter the six-digit code sent by VCCHUB. Use 123456 for this demo.");
+    } catch (requestError) {
+      error.textContent = requestError.message;
+      submit.disabled = false;
+      submit.textContent = "Send email verification code →";
+      input.focus();
+    }
+  }
+  if (event.target.id === "v2-member-otp-form") {
+    event.preventDefault();
+    const input = document.getElementById("v2-member-otp");
+    const error = document.getElementById("v2-member-otp-error");
+    const status = document.getElementById("v2-member-status");
+    const submit = event.target.querySelector('[type="submit"]');
+    const code = input.value.replace(/\D/g, "");
+    error.textContent = "";
+    status.hidden = true;
+    status.className = "member-api-status";
+    if (code.length !== 6) {
+      error.textContent = "Enter the six-digit verification code.";
+      input.focus();
+      return;
+    }
+    submit.disabled = true;
+    submit.textContent = "Verifying email…";
+    try {
+      await postJson("/api/vcchub/email-otp/verify", {
+        requestId: state.memberOtpRequestId,
+        email: state.email,
+        code: code,
+        purpose: "WALLET_SIGNUP",
+      });
+      status.hidden = false;
+      status.className = "member-api-status success";
+      status.innerHTML = "<strong>✓ Email verified</strong><span>VCCHUB is now checking your membership with OlyLife.</span>";
+      submit.textContent = "Checking with OlyLife…";
       const response = await fetch("/api/ollylife/members/verify", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: email, requestedBy: "VCCHUB" }),
+        body: JSON.stringify({ email: state.email, requestedBy: "VCCHUB", emailVerified: true }),
       });
       const payload = await response.json();
       if (!response.ok || !payload.exists) throw new Error(payload.error || "We could not find an OlyLife member with this email address.");
@@ -998,12 +1140,9 @@ document.addEventListener("submit", async function (event) {
       state.phoneCode = payload.member.phoneCode || state.phoneCode;
       state.phone = payload.member.phone || state.phone;
       state.memberId = payload.member.id || "";
-      state.firstName = payload.member.firstName || "";
-      state.lastName = payload.member.lastName || "";
+      state.memberFullName = payload.member.fullName || "";
       state.memberVerified = true;
-      status.hidden = false;
-      status.className = "member-api-status success";
-      status.innerHTML = "<strong>✓ OlyLife member confirmed</strong><span>" + escapeHtml(state.memberId) + " · " + escapeHtml((state.firstName + " " + state.lastName).trim()) + " · " + escapeHtml(state.email) + "</span>";
+      status.innerHTML = "<strong>✓ OlyLife member confirmed</strong><span>" + escapeHtml(state.memberId) + " · " + escapeHtml(state.memberFullName) + " · " + escapeHtml(state.email) + "</span>";
       submit.textContent = "Member confirmed";
       setTimeout(function () {
         state.stage = "registration";
@@ -1011,12 +1150,17 @@ document.addEventListener("submit", async function (event) {
         showToast("Membership confirmed", "Continue creating the VCCHUB wallet account.");
       }, 650);
     } catch (requestError) {
-      status.hidden = false;
-      status.className = "member-api-status error";
-      status.innerHTML = "<strong>OlyLife member not found</strong><span>" + escapeHtml(requestError.message) + " Re-enter the email or contact OlyLife support.</span>";
+      const isOtpError = /code|expired|request/i.test(requestError.message);
+      if (isOtpError) {
+        error.textContent = requestError.message;
+        input.focus();
+      } else {
+        status.hidden = false;
+        status.className = "member-api-status error";
+        status.innerHTML = "<strong>OlyLife member not found</strong><span>" + escapeHtml(requestError.message) + " Re-enter the email or contact OlyLife support.</span>";
+      }
       submit.disabled = false;
-      submit.textContent = "Try another email →";
-      input.focus();
+      submit.textContent = "Verify code & check membership →";
     }
   }
   if (event.target.id === "v2-login-form") {
@@ -1143,6 +1287,9 @@ document.addEventListener("submit", async function (event) {
     submit.textContent = "Creating card…";
     try {
       const cardType = document.querySelector('input[name="card-type"]:checked').value;
+      const initialCardBalance = state.version === "v2"
+        ? Number(document.getElementById("initial-card-balance").value)
+        : 0;
       const useDefaultOlyLifeOfficeAddress = state.version === "v2" && cardType === "PHYSICAL";
       const billingAddress = state.version === "v2" ? registeredAddressForApi() : addressFrom("billing");
       const recipientSelection = state.version === "v1" ? document.querySelector('input[name="delivery-recipient"]:checked') : null;
@@ -1178,6 +1325,9 @@ document.addEventListener("submit", async function (event) {
         deliveryAddress: deliveryAddress,
         deliveryRecipient: deliveryRecipient,
         useDefaultOlyLifeOfficeAddress: useDefaultOlyLifeOfficeAddress,
+        applyConfiguredWalletFee: state.version === "v2",
+        enforceMinimumInitialCardBalance: state.version === "v2",
+        initialCardBalance: initialCardBalance,
         deliveryAddressConfirmed: cardType !== "PHYSICAL" || useDefaultOlyLifeOfficeAddress || document.getElementById("confirm-delivery").checked,
       });
       syncAccountPayload(result);
@@ -1187,6 +1337,8 @@ document.addEventListener("submit", async function (event) {
         cardType === "PHYSICAL"
           ? (useDefaultOlyLifeOfficeAddress ? "VCCHUB applied the default OlyLife office delivery address" : "VCCHUB confirmed the physical card delivery address")
           : "VCCHUB prepared instant virtual card issuance",
+        state.version === "v2" ? "VCCHUB deducted the OlyLife-configured card creation fee from Wallet" : "VCCHUB applied the configured card fee treatment",
+        state.version === "v2" ? "VCCHUB funded the new card with " + formatMoney(initialCardBalance) + " from Wallet" : "VCCHUB created the card with a zero balance",
         "VCCHUB created the " + cardType.toLowerCase() + " card",
       ];
       state.walletView = "overview";
@@ -1194,12 +1346,12 @@ document.addEventListener("submit", async function (event) {
       showToast(
         cardType === "PHYSICAL" ? "Physical card ordered" : "Virtual card created",
         cardType === "PHYSICAL"
-          ? (useDefaultOlyLifeOfficeAddress ? "The card will be delivered to the default OlyLife office address." : "The card is active and its delivery address has been confirmed.")
-          : "The new card is active with a card balance of SGD 0.00.",
+          ? (useDefaultOlyLifeOfficeAddress ? "The card will be delivered to the default OlyLife office address with " + formatMoney(initialCardBalance) + " loaded. The SGD 10.00 creation fee was also deducted from Wallet." : "The card is active and its delivery address has been confirmed.")
+          : (state.version === "v2" ? "The card is active with " + formatMoney(initialCardBalance) + " loaded. The SGD 10.00 creation fee was also deducted from Wallet." : "The new card is active with a card balance of SGD 0.00."),
       );
     } catch (error) {
       submit.disabled = false;
-      submit.textContent = "Create card →";
+      submit.textContent = state.version === "v2" ? "Create card & fund →" : "Create card →";
       showToast("Card creation failed", error.message);
     }
   }
@@ -1226,8 +1378,7 @@ document.addEventListener("click", async function (event) {
     if (state.version === "v2" && ["registration", "kyc", "v2-success", "v2-topup"].includes(state.stage)) {
       state.memberVerified = true;
       state.memberId = state.memberId || "OL-208418";
-      state.firstName = state.firstName || "Olivia";
-      state.lastName = state.lastName || "Chen";
+      state.memberFullName = state.memberFullName || "Olivia Chen";
     }
     if (state.version === "v2" && ["kyc", "v2-success", "v2-topup"].includes(state.stage) && !state.registeredAddress.addressLine1) {
       state.registeredAddress = {
@@ -1252,8 +1403,29 @@ document.addEventListener("click", async function (event) {
   }
   const action = target.dataset.action;
   if (action === "v2-start-signup") {
+    state.memberOtpSent = false;
+    state.memberOtpRequestId = "";
+    state.memberOtpCode = "";
     state.stage = "v2-member-check";
     render();
+  } else if (action === "v2-change-member-email") {
+    state.memberOtpSent = false;
+    state.memberOtpRequestId = "";
+    state.memberOtpCode = "";
+    state.memberVerified = false;
+    render();
+  } else if (action === "v2-resend-member-otp") {
+    target.disabled = true;
+    try {
+      const payload = await postJson("/api/vcchub/email-otp/request", { email: state.email, purpose: "WALLET_SIGNUP" });
+      state.memberOtpRequestId = payload.requestId;
+      state.memberOtpCode = "";
+      render();
+      showToast("New code sent", "Enter 123456 to continue in this demo.");
+    } catch (requestError) {
+      target.disabled = false;
+      showToast("Could not resend code", requestError.message);
+    }
   } else if (action === "v2-back-auth" || action === "v2-return-signin") {
     state.stage = "v2-auth";
     render();
